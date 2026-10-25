@@ -65,6 +65,23 @@ python3 app.py            # http://localhost:8000 (debug mode)
 
 For anything beyond a quick look, use `waitress-serve --host=0.0.0.0 --port=8000 app:app`.
 
+### Automatic updates (published image)
+
+Every push to `main` runs the smoke test on GitHub Actions and publishes a multi-arch
+(amd64 + arm64) image to `ghcr.io/robbevanhoppe/greasebook:latest`. To have a server follow it:
+
+```bash
+sudo mkdir -p /opt/greasebook && cd /opt/greasebook
+sudo curl -fsSLO https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/docker-compose.yml
+sudo curl -fsSLO https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/update.sh
+sudo docker compose up -d
+sudo bash update.sh --install     # checks for a new image every 5 minutes
+```
+
+A push to `main` is live on the server within about 10 minutes (build + next check).
+`journalctl -u greasebook-update` shows each check. Moving from the bare-metal install?
+Copy `/var/lib/greasebook/*` into `/opt/greasebook/greasebook-data/` first.
+
 ## Configuration
 
 | Variable | Default | Purpose |

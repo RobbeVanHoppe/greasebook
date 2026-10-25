@@ -1,0 +1,17 @@
+# GreaseBook on a server, running the published image (no build on the server).
+#   mkdir -p /opt/greasebook && cd /opt/greasebook
+#   curl -fsSLO https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/docker-compose.yml
+#   docker compose up -d                       # http://<server>:8000
+# Every push to main publishes a new :latest; deploy/update.sh pulls it.
+services:
+  greasebook:
+    image: ghcr.io/robbevanhoppe/greasebook:latest
+    container_name: greasebook-web
+    ports:
+      - "8000:8000"
+    # environment:
+    #   - GREASEBOOK_PASSWORD=changeme
+    volumes:
+      # database + attachments -- BACK THIS UP, it is your service history.
+      - ./greasebook-data:/data:Z
+    restart: unless-stopped

@@ -171,6 +171,7 @@ const BUILD = {
   cyl: p => [{ g: alongZ(new THREE.CylinderGeometry(p.r2 ?? p.r, p.r, p.h, p.seg || 48)) }],
   lathe: p => [{ g: lathe(p.pts, p.seg) }],
   ext: p => [{ g: ext(p) }],
+  tube: p => [{ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p.pts.map(a => new V3(...a))), 64, p.r, 18, false), edges: false }],
   shell, sprocket, pulley: vpulley, belt,
 };
 

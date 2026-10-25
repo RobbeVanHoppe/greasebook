@@ -2,6 +2,8 @@
 #   push to main  -> smoke test, image ghcr.io/robbevanhoppe/greasebook:latest (+ :sha-xxxxxxx)
 #   pull request  -> smoke test + image build only (nothing published)
 # Servers pick up :latest with deploy/update.sh (see README "Automatic updates").
+# Docker Hub: also pushes <user>/greasebook when the repository variable DOCKERHUB_USERNAME
+# and the secret DOCKERHUB_TOKEN (a Docker Hub access token, Read & Write) are set.
 name: docker
 
 on:
@@ -16,6 +18,7 @@ permissions:
 
 env:
   IMAGE: ghcr.io/robbevanhoppe/greasebook
+  DH_USER: ${{ vars.DOCKERHUB_USERNAME }}
 
 jobs:
   test:
@@ -41,10 +44,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' && env.DH_USER != ''
+        with:
+          username: ${{ env.DH_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE }}
+          images: |
+            ${{ env.IMAGE }}
+            name=docker.io/${{ env.DH_USER }}/greasebook,enable=${{ env.DH_USER != '' }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short

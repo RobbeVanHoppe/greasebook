@@ -74,6 +74,10 @@ Every push to `main` runs the smoke test on GitHub Actions and publishes a multi
 curl -fsSL https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/setup.sh | sudo bash
 ```
 
+To publish to **Docker Hub** as well, add a repository variable `DOCKERHUB_USERNAME` and a
+secret `DOCKERHUB_TOKEN` (Docker Hub access token, Read & Write) under Settings → Secrets and
+variables → Actions. The next push to `main` then also publishes `<user>/greasebook:latest`.
+
 That installs into `/opt/greasebook`, carries over data from an `install.sh` setup, starts the
 container and enables the update timer. The same steps by hand:
 

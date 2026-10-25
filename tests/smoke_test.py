@@ -60,8 +60,43 @@ with app.app_context():
                        105000)["last_km"] == 100000
 print("recalculation after delete OK")
 
+# job guides: import a bundle, run it, finish it into a session
+import json  # noqa: E402
+bundle = {"format": "jg-bundle/1", "to": "TEST-JG-01", "title": "TEST JOB", "short": "Test job",
+          "change": 0, "chapter": "00", "section": "00", "date": "today", "time": "1 h",
+          "applicability": "all", "sources": "none",
+          "input": {"required": [["cold", "touch"]], "personnel": "1", "equipment": [["spanner", "10 mm", "[SP]"]],
+                    "supplies": [["gasket", "P/N", "1"]], "safety": [["warning", "hot"]]},
+          "figures": {"f1": {"title": "Fig", "callouts": [["1", "bolt"]],
+                             "svg": '<svg onload="alert(1)"><script>alert(2)</script><circle class="k" r="5"/></svg>'}},
+          "records": [["R-01.1", "Torque used"]],
+          "paras": [{"n": "9.1", "title": "Do it", "fig": "f1",
+                     "steps": [{"n": "1", "text": "Undo bolt", "record": "R-01.1"}, {"n": "2", "text": "Refit"}]}],
+          "followon": ["none"], "trace": [["step 1", "[SP]"]]}
+ok(c.post("/jobs/import", data={"bundle": (io.BytesIO(json.dumps(bundle).encode()), "t.jgb.json")},
+          content_type="multipart/form-data"))
+r = ok(c.post("/jobs/import", data={"bundle": (io.BytesIO(b"not json"), "x.json")},
+              content_type="multipart/form-data"))
+with app.app_context():
+    g_ = q("SELECT * FROM job_guides")[0]
+    assert "<script" not in g_["data"] and "onload" not in g_["data"], "svg not sanitised"
+ok(c.post("/vehicle/1/jobs/start", data={"guide_id": str(g_["id"])}))
+assert b"Undo bolt" in ok(c.get("/runs/1")).data
+assert c.post("/api/runs/1/step", json={"step": "1", "done": True}).get_json()["done"] == 1
+assert c.post("/api/runs/1/step", json={"step": "99", "done": True}).status_code == 400
+assert c.post("/api/runs/1/record", json={"field": "R-01.1", "value": "7 Nm"}).status_code == 200
+assert c.post("/api/runs/1/record", json={"field": "R-99", "value": "x"}).status_code == 400
+ok(c.post("/runs/1/finish", data={"odometer_km": "106000"}))
+with app.app_context():
+    run = q("SELECT * FROM job_runs WHERE id=1")[0]
+    sess = q("SELECT * FROM sessions WHERE id=?", (run["session_id"],))[0]
+    assert run["finished"] and sess["title"] == "Test job" and "7 Nm" in sess["notes"]
+    assert q("SELECT odometer_km FROM vehicles WHERE id=1")[0]["odometer_km"] == 106000
+print("job guides OK")
+
 for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",
-             "/vehicle/1/fuel", "/catalog", "/vehicle/1/export"]:
+             "/vehicle/1/fuel", "/catalog", "/vehicle/1/export",
+             "/jobs", "/vehicle/1/jobs", "/runs/1"]:
     assert c.get(page).status_code == 200, page
 print("all pages render OK")
 print("SMOKE TEST PASS")

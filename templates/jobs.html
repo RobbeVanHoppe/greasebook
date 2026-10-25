@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ v.name }} jobs — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ v.name }}</h1>
+    <div class="plate-sub">jobs worked from a job guide</div></div>
+  <div class="plate-odo"><div class="odo mono">{{ v.odometer_km|km }}</div></div>
+</header>
+{% include "_tabs.html" %}
+
+<section class="bar-row">
+  {% if guides %}
+  <form class="inline-form" method="post" action="{{ url_for('job_start', vid=v.id) }}">
+    <select name="guide_id" class="grow" aria-label="Job guide" required>
+      {% for g in guides %}<option value="{{ g.id }}">{{ g.to_number }} — {{ g.title }}</option>{% endfor %}
+    </select>
+    <button class="btn prime">Start job</button>
+  </form>
+  {% else %}
+  <p class="hint">No job guides imported yet. <a href="{{ url_for('jobs_library') }}">Import one</a> first.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  {% if rows %}
+  <table class="tbl cards">
+    <thead><tr><th>Started</th><th>Job</th><th>Progress</th><th>Status</th><th class="w-act"></th></tr></thead>
+    <tbody>
+    {% for r, nd, nt in rows %}
+      <tr>
+        <td class="mono" data-label="Started">{{ r.started }}</td>
+        <td class="title-cell"><span class="strong">{{ r.title }}</span><br><span class="mono dim">{{ r.to_number }}</span></td>
+        <td data-label="Progress"><div class="gauge {{ 'ok' if nd == nt else 'warn' }}"><div class="fill" style="width: {{ (nd / nt * 100) if nt else 0 }}%"></div></div>
+          <span class="mono dim">{{ nd }}/{{ nt }}</span></td>
+        <td data-label="Status">{% if r.finished %}<span class="mono">done {{ r.finished }}</span>{% else %}<span class="mono" style="color: var(--accent)">in progress</span>{% endif %}</td>
+        <td class="acts">
+          <a class="btn mini" href="{{ url_for('job_run', rid=r.id) }}">Open</a>
+          {% if r.session_id %}<a class="btn mini ghost" href="{{ url_for('session_edit', sid=r.session_id) }}">Session</a>{% endif %}
+          <form method="post" action="{{ url_for('job_run_delete', rid=r.id) }}"
+                onsubmit="return confirm('Delete this job run? A session it logged is kept.')">
+            <button class="btn mini danger" aria-label="Delete job run">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No jobs on {{ v.name }} yet. Start one above and work it step by step;
+    finishing it logs a maintenance session.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Job guides — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Job guides</h1>
+    <div class="plate-sub">step-by-step procedures with a drawing per step</div></div>
+</header>
+
+<section class="bar-row">
+  <form class="inline-form" method="post" action="{{ url_for('jobs_import') }}"
+        enctype="multipart/form-data">
+    <input type="file" name="bundle" accept=".json,application/json" class="grow"
+           aria-label="Job guide bundle (.jgb.json)" required>
+    <button class="btn prime">Import bundle</button>
+  </form>
+</section>
+<p class="hint">Import a <span class="mono">.jgb.json</span> bundle. Importing a guide
+  that already exists replaces it with the new change. Start a job from a vehicle's
+  <em>Jobs</em> tab.</p>
+
+<section class="panel">
+  {% if guides %}
+  <table class="tbl cards">
+    <thead><tr><th>TO number</th><th>Title</th><th>Change</th><th>Imported</th>
+      <th class="num">Runs</th><th class="w-act"></th></tr></thead>
+    <tbody>
+    {% for g in guides %}
+      <tr>
+        <td class="mono" data-label="TO">{{ g.to_number }}</td>
+        <td class="strong title-cell">{{ g.title }}</td>
+        <td class="mono" data-label="Change">{{ g.change }}</td>
+        <td class="mono dim" data-label="Imported">{{ g.imported }}</td>
+        <td class="mono num" data-label="Runs">{{ g.runs }}</td>
+        <td class="acts">
+          <form method="post" action="{{ url_for('job_guide_delete', gid=g.id) }}"
+                onsubmit="return confirm('Delete {{ g.to_number }} and all its runs? Logged sessions are kept.')">
+            <button class="btn mini danger" aria-label="Delete guide">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No job guides yet. Import a bundle above.</div>
+  {% endif %}
+</section>
+{% endblock %}

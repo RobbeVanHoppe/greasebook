@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}{{ jg.to }} — {{ v.name }} — {{ APP_NAME }}{% endblock %}
+{% macro alerts(list) -%}
+  {% for t, txt in list or [] %}
+  <div class="jg-al {{ t }}"><span class="h">{{ {'warning':'WARNING','caution':'CAUTION','note':'NOTE','oi':'OPEN ITEM'}[t] }}</span>{{ txt }}</div>
+  {% endfor %}
+{%- endmacro %}
+{% macro figure(fid) -%}
+  {% set f = jg.figures[fid] %}
+  {% if f %}
+  <figure class="jg-fig">
+    <button type="button" class="jg-svg" data-zoom aria-label="Enlarge figure {{ figno[fid] }}">{{ f.svg|safe }}</button>
+    <figcaption>Figure {{ figno[fid] }}. {{ f.title }}</figcaption>
+    <table class="jg-legend"><tbody>
+      {% for n, t in f.callouts %}<tr><td class="mono">{{ n }}</td><td>{{ t }}</td></tr>{% endfor %}
+    </tbody></table>
+  </figure>
+  {% endif %}
+{%- endmacro %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ v.name }}</h1>
+    <div class="plate-sub">job · {{ jg.to }}</div></div>
+  <div class="plate-odo"><div class="odo mono">{{ v.odometer_km|km }}</div></div>
+</header>
+{% include "_tabs.html" %}
+
+<article class="jg" id="jg" data-run="{{ r.id }}" data-total="{{ total }}">
+  <div class="jg-runhead mono"><span>{{ jg.to }}</span><span>CHANGE {{ jg.change }} · {{ jg.date }}</span></div>
+  <h2 class="jg-title">{{ jg.title }}</h2>
+  <p class="jg-sub dim">Chapter {{ jg.chapter }} · Section {{ jg.section }} · {{ jg.time }}</p>
+  {% if r.guide_change != r.cur_change %}
+  <div class="flash flash-err">This run was started on change {{ r.guide_change }}; the guide is now change {{ r.cur_change }}. Re-check your ticks against the new text.</div>
+  {% endif %}
+
+  <div class="jg-bar">
+    <div class="gauge ok jg-prog"><div class="fill" style="width: {{ (done|length / total * 100) if total else 0 }}%"></div></div>
+    <span class="mono dim" id="jg-count">{{ done|length }}/{{ total }} signed</span>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="jg-mode" aria-pressed="false">Step by step</button>
+  </div>
+
+  <section class="jg-input">
+    <h3 class="jg-h">Input conditions</h3>
+    <dl class="jg-kv">
+      <dt>Applicability</dt><dd>{{ jg.applicability }}</dd>
+      <dt>Sources</dt><dd>{{ jg.sources }}</dd>
+      <dt>Personnel</dt><dd>{{ jg.input.personnel }}</dd>
+    </dl>
+    <h4>Required conditions</h4>
+    <table class="tbl jg-tbl"><thead><tr><th>Condition</th><th>Check</th></tr></thead><tbody>
+      {% for c, chk in jg.input.required %}<tr><td>{{ c }}</td><td>{{ chk }}</td></tr>{% endfor %}
+    </tbody></table>
+    <h4>Support equipment</h4>
+    <table class="tbl jg-tbl"><thead><tr><th>Item</th><th>Requirement</th><th>Origin</th></tr></thead><tbody>
+      {% for a, b, c in jg.input.equipment %}<tr><td>{{ a }}</td><td>{{ b }}</td><td class="mono">{{ c }}</td></tr>{% endfor %}
+    </tbody></table>
+    <h4>Supplies</h4>
+    <table class="tbl jg-tbl"><thead><tr><th>Item</th><th>Part number / spec</th><th>Qty</th></tr></thead><tbody>
+      {% for a, b, c in jg.input.supplies %}<tr><td>{{ a }}</td><td>{{ b }}</td><td class="mono">{{ c }}</td></tr>{% endfor %}
+    </tbody></table>
+    <h3 class="jg-h">Safety summary</h3>
+    {{ alerts(jg.input.safety) }}
+  </section>
+
+  <h3 class="jg-h jg-proc-h">Procedure</h3>
+  {% set ns = namespace(i=0) %}
+  {% for p in jg.paras %}
+  <section class="jg-para">
+    <div class="jg-steps">
+      <h4 class="jg-ph">{{ p.n }} {{ p.title }}</h4>
+      {% for s in p.steps %}
+      <div class="jg-step-wrap" data-i="{{ ns.i }}">{% set ns.i = ns.i + 1 %}
+        {{ alerts(s.alerts) }}
+        <div class="jg-step {% if s.n in done %}done{% endif %}">
+          <span class="jg-no mono">{{ s.n }}.</span>
+          <div>
+            <div class="jg-txt">{{ s.text }}</div>
+            {% if s.sub %}<ul class="jg-sub-steps">{% for n, t in s.sub %}<li><b class="mono">{{ n }}.</b><span>{{ t }}</span></li>{% endfor %}</ul>{% endif %}
+            <div class="jg-chk">
+              <label class="check"><input type="checkbox" data-step="{{ s.n }}" {% if s.n in done %}checked{% endif %}> <span>Done</span></label>
+              {% if s.hold %}<span class="badge due-badge">HOLD POINT</span>{% endif %}
+              {% if s.record %}<span class="badge jg-recb mono">{{ s.record }}</span>{% endif %}
+            </div>
+            {% if s.record %}
+            <label class="jg-rec">{{ recnames.get(s.record, s.record) }}
+              <textarea data-rec="{{ s.record }}" rows="2">{{ recs.get(s.record, '') }}</textarea>
+              <span class="dim jg-saved" aria-live="polite"></span>
+            </label>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="jg-figcol">{{ figure(p.fig) }}</div>
+  </section>
+  {% endfor %}
+
+  <section class="jg-end">
+    <h3 class="jg-h">Follow-on maintenance</h3>
+    <ol>{% for f in jg.followon %}<li>{{ f }}</li>{% endfor %}</ol>
+    <h3 class="jg-h">Traceability</h3>
+    <table class="tbl jg-tbl"><tbody>{% for a, b in jg.trace %}<tr><td>{{ a }}</td><td>{{ b }}</td></tr>{% endfor %}</tbody></table>
+
+    <h3 class="jg-h">Finish</h3>
+    {% if r.session_id %}
+      <p>Finished {{ r.finished }} and logged as a <a href="{{ url_for('session_edit', sid=r.session_id) }}">maintenance session</a>.</p>
+    {% else %}
+      <form class="inline-form" method="post" action="{{ url_for('job_finish', rid=r.id) }}">
+        <label class="ilabel">Odometer (km)<input name="odometer_km" inputmode="decimal" value="{{ '%.0f'|format(v.odometer_km or 0) }}" required></label>
+        <button class="btn prime">Finish and log session</button>
+      </form>
+      <p class="hint">Creates a session dated today with the guide number and your record entries in the notes. Add parts, cost and covered schedule items there.</p>
+    {% endif %}
+  </section>
+</article>
+
+<nav class="jg-worknav" hidden>
+  <button type="button" class="btn" id="jg-prev">‹ Previous</button>
+  <span class="mono dim" id="jg-pos"></span>
+  <button type="button" class="btn prime" id="jg-next">Next ›</button>
+</nav>
+<dialog class="dlg jg-zoom" id="jg-zoom"><div class="jg-zoom-body"></div>
+  <div class="dlg-btns"><button type="button" class="btn prime" onclick="this.closest('dialog').close()">Close</button></div></dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const root = document.getElementById("jg"), rid = root.dataset.run, total = +root.dataset.total;
+  async function post(url, body) {
+    const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const j = await r.json().catch(() => ({error: "No answer from the server."}));
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    return j;
+  }
+  // sign-offs
+  root.querySelectorAll("input[data-step]").forEach(cb => cb.addEventListener("change", async () => {
+    try {
+      const j = await post(`/api/runs/${rid}/step`, {step: cb.dataset.step, done: cb.checked});
+      cb.closest(".jg-step").classList.toggle("done", cb.checked);
+      document.getElementById("jg-count").textContent = `${j.done}/${total} signed`;
+      root.querySelector(".jg-prog .fill").style.width = (j.done / total * 100) + "%";
+    } catch (e) { cb.checked = !cb.checked; alertFlash("Not saved: " + e.message); }
+  }));
+  // record fields (save after typing stops)
+  root.querySelectorAll("textarea[data-rec]").forEach(t => {
+    let tm; const tag = t.parentElement.querySelector(".jg-saved");
+    t.addEventListener("input", () => {
+      clearTimeout(tm); tag.textContent = "…";
+      tm = setTimeout(async () => {
+        try { await post(`/api/runs/${rid}/record`, {field: t.dataset.rec, value: t.value}); tag.textContent = "saved"; }
+        catch (e) { tag.textContent = "not saved: " + e.message; }
+      }, 700);
+    });
+  });
+  function alertFlash(msg) {
+    const d = document.createElement("div"); d.className = "flash flash-err"; d.textContent = msg;
+    root.prepend(d); setTimeout(() => d.remove(), 6000);
+  }
+  // figure zoom
+  const zd = document.getElementById("jg-zoom");
+  root.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => {
+    zd.querySelector(".jg-zoom-body").innerHTML = b.innerHTML; zd.showModal();
+  }));
+  // step-by-step mode
+  const wraps = [...root.querySelectorAll(".jg-step-wrap")], nav = document.querySelector(".jg-worknav");
+  const mbtn = document.getElementById("jg-mode"), key = "jgpos:" + rid;
+  let i = 0; try { i = Math.min(+localStorage.getItem(key) || 0, wraps.length - 1); } catch (e) {}
+  function show() {
+    wraps.forEach((w, k) => w.hidden = k !== i);
+    root.querySelectorAll(".jg-para").forEach(p => p.hidden = !p.contains(wraps[i]));
+    document.getElementById("jg-pos").textContent = `step ${i + 1} of ${wraps.length}`;
+    document.getElementById("jg-prev").disabled = i === 0;
+    document.getElementById("jg-next").textContent = i === wraps.length - 1 ? "Finish ›" : "Next ›";
+    try { localStorage.setItem(key, i); } catch (e) {}
+  }
+  function setMode(work) {
+    document.body.classList.toggle("jg-working", work);
+    mbtn.setAttribute("aria-pressed", work); mbtn.textContent = work ? "Full page" : "Step by step";
+    nav.hidden = !work;
+    if (work) show(); else { wraps.forEach(w => w.hidden = false); root.querySelectorAll(".jg-para").forEach(p => p.hidden = false); }
+    window.scrollTo(0, root.offsetTop);
+  }
+  mbtn.addEventListener("click", () => setMode(!document.body.classList.contains("jg-working")));
+  document.getElementById("jg-prev").addEventListener("click", () => { if (i > 0) { i--; show(); window.scrollTo(0, root.offsetTop); } });
+  document.getElementById("jg-next").addEventListener("click", () => {
+    if (i < wraps.length - 1) { i++; show(); window.scrollTo(0, root.offsetTop); }
+    else { setMode(false); root.querySelector(".jg-end").scrollIntoView(); }
+  });
+})();
+</script>
+{% endblock %}

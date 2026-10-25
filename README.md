@@ -18,6 +18,9 @@ the money pit you are.
 - **Parts catalogue and suppliers** with part numbers and prices for reordering; create a part
   or supplier inline while logging a session
 - **Fuel log** with l/100 km calculated between full tanks
+- **Job guides** - import step-by-step procedures (`.jgb.json` bundles: input conditions,
+  WARNING/CAUTION/NOTE, a drawing per paragraph), work them per vehicle on your phone with
+  sign-offs and record fields saved in the ledger, and finish the job straight into a session
 - **Search and filters** - sessions by title, notes, part, part number, supplier and date range
 - **Exports** - PDF service history with a full cost summary (parts, labour, fuel, grand total,
   cost per km and per year, biggest spends), plus CSV for sessions, fuel and the parts catalogue

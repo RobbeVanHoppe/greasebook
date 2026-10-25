@@ -47,6 +47,8 @@
     <div class="side-foot">
       <a href="{{ url_for('catalog') }}"
          class="foot-link {% if request.endpoint == 'catalog' %}on{% endif %}">Parts &amp; suppliers</a>
+      <a href="{{ url_for('jobs_library') }}"
+         class="foot-link {% if request.endpoint == 'jobs_library' %}on{% endif %}">Job guides</a>
       {% if auth_enabled %}<a class="foot-link" href="{{ url_for('logout') }}">Log out</a>{% endif %}
     </div>
   </aside>

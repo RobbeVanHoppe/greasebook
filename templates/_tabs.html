@@ -3,6 +3,8 @@
      href="{{ url_for('dashboard', vid=v.id) }}">Dashboard</a>
   <a class="{% if request.endpoint in ('sessions_list','session_new','session_edit') %}on{% endif %}"
      href="{{ url_for('sessions_list', vid=v.id) }}">Sessions</a>
+  <a class="{% if request.endpoint in ('jobs_list','job_run') %}on{% endif %}"
+     href="{{ url_for('jobs_list', vid=v.id) }}">Jobs</a>
   <a class="{% if request.endpoint == 'fuel_list' %}on{% endif %}"
      href="{{ url_for('fuel_list', vid=v.id) }}">Fuel log</a>
   <a class="{% if request.endpoint == 'export_page' %}on{% endif %}"

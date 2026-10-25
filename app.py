@@ -15,7 +15,9 @@ Env:
 
 import csv
 import io
+import json
 import logging
+import re
 import os
 import secrets
 import textwrap
@@ -106,6 +108,25 @@ CREATE TABLE IF NOT EXISTS fuel_log(
     total_cost REAL,
     full_tank INTEGER NOT NULL DEFAULT 1,
     notes TEXT
+);
+CREATE TABLE IF NOT EXISTS job_guides(
+    id INTEGER PRIMARY KEY,
+    to_number TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    change INTEGER NOT NULL DEFAULT 0,
+    data TEXT NOT NULL,
+    imported TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS job_runs(
+    id INTEGER PRIMARY KEY,
+    vehicle_id INTEGER NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    guide_id INTEGER NOT NULL REFERENCES job_guides(id) ON DELETE CASCADE,
+    guide_change INTEGER NOT NULL DEFAULT 0,
+    started TEXT NOT NULL,
+    finished TEXT,
+    session_id INTEGER REFERENCES sessions(id) ON DELETE SET NULL,
+    steps TEXT NOT NULL DEFAULT '[]',
+    records TEXT NOT NULL DEFAULT '{}'
 );
 """
 
@@ -1118,6 +1139,198 @@ def api_suppliers():
         return jsonify(error=err), 400
     s = q1("SELECT * FROM suppliers WHERE id=?", (sid,))
     return jsonify(id=sid, name=s["name"])
+
+
+# ---------------------------------------------------------------- job guides
+#
+# A job guide (JG) is a step-by-step procedure imported as a "jg-bundle/1"
+# JSON file: input conditions, numbered steps with WARNING/CAUTION/NOTE,
+# one figure per paragraph (SVG inlined). A run is one time you do the job
+# on a vehicle; ticks and record fields live on the run, and finishing it
+# logs a maintenance session.
+
+JG_REQUIRED = ("to", "title", "input", "figures", "paras")
+_SVG_BAD = [
+    (re.compile(r"<script\b.*?</script\s*>", re.I | re.S), ""),
+    (re.compile(r"<foreignObject\b.*?</foreignObject\s*>", re.I | re.S), ""),
+    (re.compile(r"\son[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.I), ""),
+    (re.compile(r"(href\s*=\s*[\"']?)\s*javascript:", re.I), r"\1#"),
+]
+
+
+def clean_svg(svg):
+    """Imported figures are shown inline; strip anything executable."""
+    for rx, rep in _SVG_BAD:
+        svg = rx.sub(rep, svg)
+    return svg
+
+
+def parse_bundle(raw):
+    try:
+        jg = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None, "That file is not valid JSON."
+    if not isinstance(jg, dict) or jg.get("format") != "jg-bundle/1":
+        return None, ("Not a job guide bundle. Build it with "
+                      "to/jg-web/tools/bundle_jg.py (format jg-bundle/1).")
+    missing = [k for k in JG_REQUIRED if k not in jg]
+    if missing:
+        return None, "Bundle is missing: " + ", ".join(missing)
+    for fid, f in jg["figures"].items():
+        f["svg"] = clean_svg(f.get("svg", ""))
+    return jg, None
+
+
+def jg_steps(jg):
+    return [s["n"] for p in jg["paras"] for s in p["steps"]]
+
+
+def load_run(rid):
+    r = q1("SELECT r.*, g.data, g.to_number, g.change cur_change FROM job_runs r "
+           "JOIN job_guides g ON g.id = r.guide_id WHERE r.id=?", (rid,))
+    if not r:
+        abort(404)
+    return r, json.loads(r["data"]), json.loads(r["steps"]), json.loads(r["records"])
+
+
+@app.route("/jobs")
+def jobs_library():
+    guides = q("SELECT g.*, (SELECT COUNT(*) FROM job_runs r WHERE r.guide_id=g.id) "
+               "runs FROM job_guides g ORDER BY to_number")
+    return render_template("job_library.html", guides=guides)
+
+
+@app.route("/jobs/import", methods=["POST"])
+def jobs_import():
+    f = request.files.get("bundle")
+    if not f or not f.filename:
+        flash("Choose a .jgb.json bundle to import.", "error")
+        return redirect(url_for("jobs_library"))
+    jg, err = parse_bundle(f.read())
+    if err:
+        flash(err, "error")
+        return redirect(url_for("jobs_library"))
+    old = q1("SELECT * FROM job_guides WHERE to_number=?", (jg["to"],))
+    vals = (jg["title"], int(jg.get("change") or 0), json.dumps(jg), today_str())
+    if old:
+        x("UPDATE job_guides SET title=?, change=?, data=?, imported=? WHERE id=?",
+          vals + (old["id"],))
+        flash(f"{jg['to']} updated to change {vals[1]}. Runs in progress keep "
+              "their ticks; re-check them against the new text.")
+    else:
+        x("INSERT INTO job_guides(title,change,data,imported,to_number) "
+          "VALUES(?,?,?,?,?)", vals + (jg["to"],))
+        flash(f"{jg['to']} imported.")
+    return redirect(url_for("jobs_library"))
+
+
+@app.route("/jobs/<int:gid>/delete", methods=["POST"])
+def job_guide_delete(gid):
+    g_ = q1("SELECT * FROM job_guides WHERE id=?", (gid,)) or abort(404)
+    x("DELETE FROM job_guides WHERE id=?", (gid,))
+    flash(f"Deleted {g_['to_number']} and its runs (logged sessions are kept).")
+    return redirect(url_for("jobs_library"))
+
+
+@app.route("/vehicle/<int:vid>/jobs")
+def jobs_list(vid):
+    v = get_vehicle(vid)
+    runs = q("SELECT r.*, g.to_number, g.title, g.data FROM job_runs r "
+             "JOIN job_guides g ON g.id = r.guide_id WHERE r.vehicle_id=? "
+             "ORDER BY r.finished IS NOT NULL, r.started DESC, r.id DESC", (vid,))
+    rows = [(r, len(json.loads(r["steps"])), len(jg_steps(json.loads(r["data"]))))
+            for r in runs]
+    guides = q("SELECT id, to_number, title FROM job_guides ORDER BY to_number")
+    return render_template("jobs.html", v=v, rows=rows, guides=guides)
+
+
+@app.route("/vehicle/<int:vid>/jobs/start", methods=["POST"])
+def job_start(vid):
+    get_vehicle(vid)
+    g_ = q1("SELECT * FROM job_guides WHERE id=?",
+            (request.form.get("guide_id"),))
+    if not g_:
+        flash("Pick a job guide to start (import one under Job guides first).",
+              "error")
+        return redirect(url_for("jobs_list", vid=vid))
+    rid = x("INSERT INTO job_runs(vehicle_id,guide_id,guide_change,started) "
+            "VALUES(?,?,?,?)", (vid, g_["id"], g_["change"], today_str()))
+    return redirect(url_for("job_run", rid=rid))
+
+
+@app.route("/runs/<int:rid>")
+def job_run(rid):
+    r, jg, done, recs = load_run(rid)
+    v = get_vehicle(r["vehicle_id"])
+    figno = {fid: i + 1 for i, fid in enumerate(jg["figures"])}
+    return render_template("job_run.html", v=v, r=r, jg=jg, done=set(done),
+                           recs=recs, figno=figno, total=len(jg_steps(jg)),
+                           recnames=dict(jg.get("records", [])))
+
+
+@app.route("/api/runs/<int:rid>/step", methods=["POST"])
+def api_run_step(rid):
+    r, jg, done, _ = load_run(rid)
+    step = str((request.get_json(silent=True) or {}).get("step", ""))
+    if step not in jg_steps(jg):
+        return jsonify(error=f"No step {step!r} in {r['to_number']}."), 400
+    want = bool((request.get_json(silent=True) or {}).get("done"))
+    done = [s for s in done if s != step] + ([step] if want else [])
+    x("UPDATE job_runs SET steps=? WHERE id=?", (json.dumps(done), rid))
+    return jsonify(done=len(done))
+
+
+@app.route("/api/runs/<int:rid>/record", methods=["POST"])
+def api_run_record(rid):
+    r, jg, _, recs = load_run(rid)
+    body = request.get_json(silent=True) or {}
+    field = str(body.get("field", ""))
+    if field not in dict(jg.get("records", [])):
+        return jsonify(error=f"No record field {field!r} in {r['to_number']}."), 400
+    recs[field] = str(body.get("value", ""))[:4000]
+    x("UPDATE job_runs SET records=? WHERE id=?", (json.dumps(recs), rid))
+    return jsonify(ok=True)
+
+
+@app.route("/runs/<int:rid>/finish", methods=["POST"])
+def job_finish(rid):
+    r, jg, done, recs = load_run(rid)
+    v = get_vehicle(r["vehicle_id"])
+    if r["session_id"]:
+        return redirect(url_for("session_edit", sid=r["session_id"]))
+    try:
+        odo = num("odometer_km")
+    except ValueError:
+        odo = None
+    if odo is None:
+        flash("Enter the odometer reading to log the session.", "error")
+        return redirect(url_for("job_run", rid=rid))
+    total = len(jg_steps(jg))
+    lines = [f"Job guide {jg['to']} change {r['guide_change']}: "
+             f"{len(done)} of {total} steps signed off."]
+    for fid, label in jg.get("records", []):
+        if recs.get(fid):
+            lines.append(f"{fid} {label}: {recs[fid]}")
+    sid = x("INSERT INTO sessions(date,odometer_km,title,notes,labor_cost,"
+            "vehicle_id) VALUES(?,?,?,?,?,?)",
+            (today_str(), odo, jg.get("short") or jg["title"].title(),
+             "\n".join(lines), 0, v["id"]))
+    x("UPDATE job_runs SET finished=?, session_id=? WHERE id=?",
+      (today_str(), sid, rid))
+    if odo > (v["odometer_km"] or 0):
+        x("UPDATE vehicles SET odometer_km=?, odo_updated=? WHERE id=?",
+          (odo, today_str(), v["id"]))
+    flash("Job finished and logged as a session. Add the parts, cost and "
+          "schedule items it covered.")
+    return redirect(url_for("session_edit", sid=sid))
+
+
+@app.route("/runs/<int:rid>/delete", methods=["POST"])
+def job_run_delete(rid):
+    r = q1("SELECT vehicle_id FROM job_runs WHERE id=?", (rid,)) or abort(404)
+    x("DELETE FROM job_runs WHERE id=?", (rid,))
+    flash("Job run deleted (a session it logged is kept).")
+    return redirect(url_for("jobs_list", vid=r["vehicle_id"]))
 
 
 # ---------------------------------------------------------------- export

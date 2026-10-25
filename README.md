@@ -71,6 +71,13 @@ Every push to `main` runs the smoke test on GitHub Actions and publishes a multi
 (amd64 + arm64) image to `ghcr.io/robbevanhoppe/greasebook:latest`. To have a server follow it:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/setup.sh | sudo bash
+```
+
+That installs into `/opt/greasebook`, carries over data from an `install.sh` setup, starts the
+container and enables the update timer. The same steps by hand:
+
+```bash
 sudo mkdir -p /opt/greasebook && cd /opt/greasebook
 sudo curl -fsSLO https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/docker-compose.yml
 sudo curl -fsSLO https://raw.githubusercontent.com/RobbeVanHoppe/greasebook/main/deploy/update.sh

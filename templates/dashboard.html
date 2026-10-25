@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ v.name }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+
+<header class="plate">
+  <div class="plate-id">
+    <h1>{{ v.name }}</h1>
+    <div class="plate-sub">
+      {{ v.vtype }}{% if v.make or v.model or v.year %} · {{ v.make }} {{ v.model }} {{ v.year or '' }}{% endif %}
+      {% if v.plate %} · <span class="mono">{{ v.plate }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="plate-odo">
+    <div class="odo mono">{{ v.odometer_km|km }}</div>
+    <div class="odo-sub">updated {{ v.odo_updated or '—' }}</div>
+  </div>
+  <div class="plate-actions">
+    <button class="btn ghost" onclick="openDialog('dlg-vehicle', this)"
+      data-action="{{ url_for('vehicle_save') }}"
+      data-id="{{ v.id }}" data-name="{{ v.name }}" data-vtype="{{ v.vtype }}"
+      data-make="{{ v.make or '' }}" data-model="{{ v.model or '' }}"
+      data-year="{{ v.year or '' }}" data-vin="{{ v.vin or '' }}"
+      data-plate="{{ v.plate or '' }}" data-odometer_km="{{ v.odometer_km }}"
+      data-notes="{{ v.notes or '' }}">Edit</button>
+    <form method="post" action="{{ url_for('vehicle_delete', vid=v.id) }}"
+          onsubmit="return confirm('Delete {{ v.name }} and ALL its history?')">
+      <button class="btn ghost danger">Delete</button>
+    </form>
+  </div>
+</header>
+
+{% include "_tabs.html" %}
+
+<section class="bar-row">
+  <form class="inline-form odo-form" method="post" action="{{ url_for('odometer', vid=v.id) }}">
+    <input name="odometer_km" inputmode="decimal" required
+           placeholder="New odometer reading" aria-label="New odometer reading">
+    <button class="btn prime">Update</button>
+  </form>
+  <div class="spacer"></div>
+  {% if overdue %}<span class="badge due-badge">{{ overdue }} overdue</span>{% endif %}
+  <button class="btn" onclick="openDialog('dlg-item', this)"
+          data-action="{{ url_for('item_save', vid=v.id) }}"
+          data-last_km="{{ v.odometer_km|int }}"
+          data-last_date="{{ today }}">+ Schedule item</button>
+  <form method="post" action="{{ url_for('add_templates', vid=v.id) }}"
+        onsubmit="return confirm('Add the common {{ v.vtype|lower }} template items?')">
+    <button class="btn ghost">Add template items</button>
+  </form>
+</section>
+
+<section class="panel">
+  {% if rows %}
+  <table class="tbl cards">
+    <thead><tr>
+      <th>Item</th><th>Interval</th><th>Last done</th><th>Next due</th>
+      <th class="w-gauge">Life used</th><th class="w-act"></th>
+    </tr></thead>
+    <tbody>
+    {% for pct, it, st in rows %}
+      <tr>
+        <td class="strong title-cell">{{ it.name }}</td>
+        <td class="mono dim" data-label="Interval">
+          {%- if it.interval_km %}{{ it.interval_km|km }}{% endif -%}
+          {%- if it.interval_km and it.interval_months %} / {% endif -%}
+          {%- if it.interval_months %}{{ it.interval_months|int }} mo{% endif -%}
+        </td>
+        <td class="mono dim" data-label="Last done">
+          {%- if st.last_km is not none %}{{ st.last_km|km }}{% endif -%}
+          {%- if st.last_km is not none and st.last_date %} · {% endif -%}
+          {%- if st.last_date %}{{ st.last_date }}{% endif -%}
+          {%- if st.last_km is none and not st.last_date %}—{% endif -%}
+        </td>
+        <td class="mono dim" data-label="Next due">
+          {%- if st.due_km is not none %}{{ st.due_km|km }}{% endif -%}
+          {%- if st.due_km is not none and st.due_date %} · {% endif -%}
+          {%- if st.due_date %}{{ st.due_date }}{% endif -%}
+          {%- if st.due_km is none and not st.due_date %}—{% endif -%}
+        </td>
+        <td class="gauge-cell" data-label="Life used">
+          {% if st.pct is none %}
+            <span class="dim">no baseline</span>
+          {% else %}
+          <div class="gauge {{ st.tag }}" role="img"
+               aria-label="{{ (st.pct * 100)|round|int }}% of interval used">
+            <div class="fill" style="width: {{ st.width }}%"></div>
+          </div>
+          <div class="gauge-label mono {{ st.tag }}">
+            {{ (st.pct * 100)|round|int }}%{% if st.pct >= 1 %} · OVERDUE{% endif %}
+          </div>
+          {% endif %}
+        </td>
+        <td class="acts">
+          <button class="btn mini" onclick="openDialog('dlg-item', this)"
+            data-action="{{ url_for('item_save', vid=v.id) }}"
+            data-id="{{ it.id }}" data-name="{{ it.name }}"
+            data-interval_km="{{ it.interval_km or '' }}"
+            data-interval_months="{{ it.interval_months or '' }}"
+            data-last_km="{{ it.last_km if it.last_km is not none else '' }}"
+            data-last_date="{{ it.last_date or '' }}"
+            data-notes="{{ it.notes or '' }}">Edit</button>
+          <form method="post" action="{{ url_for('item_done', iid=it.id) }}">
+            <button class="btn mini">Done now</button>
+          </form>
+          <form method="post" action="{{ url_for('item_delete', iid=it.id) }}"
+                onsubmit="return confirm('Delete schedule item {{ it.name }}?')">
+            <button class="btn mini danger" aria-label="Delete item">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No schedule items yet. Add them from the service manual,
+    or start from the template and adjust.</div>
+  {% endif %}
+</section>
+
+<dialog id="dlg-item" class="dlg">
+  <form method="post">
+    <h3 class="dlg-title">Schedule item</h3>
+    <input type="hidden" name="id">
+    <label>Name *<input name="name" required placeholder="Engine oil + filter"></label>
+    <div class="grid2">
+      <label>Interval (km)<input name="interval_km" inputmode="decimal"></label>
+      <label>Interval (months)<input name="interval_months" inputmode="decimal"></label>
+      <label>Last done at (km)<input name="last_km" inputmode="decimal"></label>
+      <label>Last done on<input type="date" name="last_date"></label>
+    </div>
+    <label>Notes<input name="notes"></label>
+    <p class="hint">Leave an interval blank if it doesn't apply — the item is due
+      when km <em>or</em> time runs out first. "Last done" here is the manual
+      baseline; sessions covering this item take over automatically when newer.</p>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Save item</button>
+    </div>
+  </form>
+</dialog>
+
+{% endblock %}

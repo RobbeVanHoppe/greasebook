@@ -1,0 +1,10 @@
+<nav class="tabs">
+  <a class="{% if request.endpoint == 'dashboard' %}on{% endif %}"
+     href="{{ url_for('dashboard', vid=v.id) }}">Dashboard</a>
+  <a class="{% if request.endpoint in ('sessions_list','session_new','session_edit') %}on{% endif %}"
+     href="{{ url_for('sessions_list', vid=v.id) }}">Sessions</a>
+  <a class="{% if request.endpoint == 'fuel_list' %}on{% endif %}"
+     href="{{ url_for('fuel_list', vid=v.id) }}">Fuel log</a>
+  <a class="{% if request.endpoint == 'export_page' %}on{% endif %}"
+     href="{{ url_for('export_page', vid=v.id) }}">Export</a>
+</nav>

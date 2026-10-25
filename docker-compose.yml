@@ -1,0 +1,20 @@
+# GreaseBook web -- works with Docker AND Podman:
+#   docker compose up --build -d
+#   podman compose up --build -d      (or podman-compose)
+# Then open http://<server>:8000
+services:
+  greasebook:
+    build: .
+    image: greasebook:latest
+    container_name: greasebook-web
+    ports:
+      - "8000:8000"          # reachable on your LAN; add a reverse proxy
+                             # + HTTPS if you ever expose it further
+    # Uncomment to require a password (recommended on a shared network):
+    # environment:
+    #   - GREASEBOOK_PASSWORD=changeme
+    volumes:
+      # database + attachments -- BACK THIS UP, it is your service history.
+      # :Z relabels for SELinux (Fedora/RHEL); harmless elsewhere.
+      - ./greasebook-data:/data:Z
+    restart: unless-stopped

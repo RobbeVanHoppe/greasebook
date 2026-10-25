@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ v.name }} fuel — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ v.name }}</h1>
+    <div class="plate-sub">fuel log</div></div>
+  <div class="plate-odo">
+    {% if avg %}
+    <div class="odo mono">{{ '%.2f'|format(avg) }} <small>l/100km</small></div>
+    <div class="odo-sub">{{ '%.1f'|format(lit) }} l over {{ km|int }} km between full tanks</div>
+    {% else %}
+    <div class="odo-sub">average appears after two full-tank fill-ups</div>
+    {% endif %}
+  </div>
+</header>
+{% include "_tabs.html" %}
+
+<section class="bar-row">
+  <form class="inline-form filters" method="get">
+    <input type="date" name="from" value="{{ request.args.get('from','') }}"
+           class="w-date" aria-label="From date">
+    <input type="date" name="to" value="{{ request.args.get('to','') }}"
+           class="w-date" aria-label="To date">
+    <button class="btn">Filter</button>
+  </form>
+  <div class="spacer"></div>
+  <button class="btn prime" onclick="openDialog('dlg-fuel', this)"
+    data-action="{{ url_for('fuel_save', vid=v.id) }}"
+    data-date="{{ today }}" data-odometer_km="{{ v.odometer_km|int }}"
+    data-full_tank="1">+ Log fill-up</button>
+</section>
+
+<section class="panel">
+  {% if rows %}
+  <table class="tbl cards">
+    <thead><tr><th>Date</th><th>Odometer</th><th class="num">Liters</th>
+      <th class="num">Cost</th><th class="num">€ / l</th><th>Tank</th><th class="w-act"></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="mono title-cell">{{ r.date }}</td>
+        <td class="mono dim" data-label="Odometer">{{ r.odometer_km|km }}</td>
+        <td class="mono num" data-label="Liters">{{ '%g'|format(r.liters) }}</td>
+        <td class="mono num" data-label="Cost">{{ r.total_cost|money if r.total_cost else '—' }}</td>
+        <td class="mono num dim" data-label="€ / l">{% if r.total_cost and r.liters %}{{ '%.3f'|format(r.total_cost / r.liters) }}{% else %}—{% endif %}</td>
+        <td data-label="Tank">{{ 'full' if r.full_tank else 'partial' }}</td>
+        <td class="acts">
+          <button class="btn mini" onclick="openDialog('dlg-fuel', this)"
+            data-action="{{ url_for('fuel_save', vid=v.id) }}"
+            data-id="{{ r.id }}" data-date="{{ r.date }}"
+            data-odometer_km="{{ r.odometer_km }}" data-liters="{{ r.liters }}"
+            data-total_cost="{{ r.total_cost or '' }}"
+            data-full_tank="{{ r.full_tank }}" data-notes="{{ r.notes or '' }}">Edit</button>
+          <form method="post" action="{{ url_for('fuel_delete', fid=r.id) }}"
+                onsubmit="return confirm('Delete this fill-up?')">
+            <button class="btn mini danger" aria-label="Delete fill-up">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No fill-ups yet. Log full tanks and l/100km computes itself.</div>
+  {% endif %}
+</section>
+
+<dialog id="dlg-fuel" class="dlg">
+  <form method="post">
+    <h3 class="dlg-title">Fill-up</h3>
+    <input type="hidden" name="id">
+    <div class="grid2">
+      <label>Date *<input type="date" name="date" required></label>
+      <label>Odometer (km) *<input name="odometer_km" required inputmode="decimal"></label>
+      <label>Liters *<input name="liters" required inputmode="decimal"></label>
+      <label>Total cost (€)<input name="total_cost" inputmode="decimal"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="full_tank" value="1">
+      <span>Filled to full (needed for l/100km)</span></label>
+    <label>Notes<input name="notes"></label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Save fill-up</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

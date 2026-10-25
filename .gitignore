@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# YOUR DATA -- never commit the ledger, uploads or the session secret
+greasebook-data/
+garage.db
+*.db
+attachments/
+secret_key
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Test artifacts
+.pytest_cache/

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ v.name }} sessions — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ v.name }}</h1>
+    <div class="plate-sub">maintenance sessions</div></div>
+  <div class="plate-odo"><div class="odo mono">{{ v.odometer_km|km }}</div></div>
+</header>
+{% include "_tabs.html" %}
+
+<section class="bar-row">
+  <form class="inline-form filters" method="get">
+    <input name="q" value="{{ request.args.get('q','') }}" class="grow"
+           placeholder="Search title, notes, part, part #, supplier">
+    <input type="date" name="from" value="{{ request.args.get('from','') }}"
+           class="w-date" aria-label="From date">
+    <input type="date" name="to" value="{{ request.args.get('to','') }}"
+           class="w-date" aria-label="To date">
+    <button class="btn">Filter</button>
+    {% if request.args.get('q') or request.args.get('from') or request.args.get('to') %}
+      <a class="btn ghost" href="{{ url_for('sessions_list', vid=v.id) }}">Clear</a>
+    {% endif %}
+  </form>
+  <div class="spacer"></div>
+  <a class="btn prime" href="{{ url_for('session_new', vid=v.id) }}">+ Log session</a>
+</section>
+
+<section class="panel">
+  {% if rows %}
+  <table class="tbl cards">
+    <thead><tr><th>Date</th><th>Odometer</th><th>Title</th>
+      <th class="num">Parts</th><th class="num">Labor</th><th class="num">Total</th>
+      <th></th><th class="w-act"></th></tr></thead>
+    <tbody>
+    {% for s, pc, total, na in rows %}
+      <tr>
+        <td class="mono" data-label="Date">{{ s.date }}</td>
+        <td class="mono dim" data-label="Odometer">{{ s.odometer_km|km }}</td>
+        <td class="strong title-cell">{{ s.title or 'Maintenance' }}</td>
+        <td class="mono num" data-label="Parts">{{ pc|money }}</td>
+        <td class="mono num" data-label="Labor">{{ (s.labor_cost or 0)|money }}</td>
+        <td class="mono num strong" data-label="Total">{{ total|money }}</td>
+        <td class="dim" {% if na %}data-label="Files"{% endif %}>{% if na %}📎 {{ na }}{% endif %}</td>
+        <td class="acts">
+          <a class="btn mini" href="{{ url_for('session_edit', sid=s.id) }}">Open</a>
+          <form method="post" action="{{ url_for('session_delete', sid=s.id) }}"
+                onsubmit="return confirm('Delete this session and its attachments?')">
+            <button class="btn mini danger" aria-label="Delete session">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No sessions match. Log the first one — the life bars on the
+    dashboard are fed by these.</div>
+  {% endif %}
+</section>
+{% endblock %}

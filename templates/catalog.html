@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Parts & suppliers — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Parts &amp; suppliers</h1>
+    <div class="plate-sub">the reorder shelf — shared across all vehicles</div></div>
+</header>
+
+<div class="cols">
+<section class="col">
+  <div class="bar-row">
+    <form class="inline-form" method="get">
+      <input type="hidden" name="sq" value="{{ sq }}">
+      <input name="pq" value="{{ pq }}" placeholder="Search part, part #, supplier">
+      <button class="btn">Filter</button>
+    </form>
+    <div class="spacer"></div>
+    <button class="btn prime" onclick="openDialog('dlg-cpart', this)"
+      data-action="{{ url_for('part_save') }}">+ Part</button>
+  </div>
+  <div class="panel">
+    {% if parts %}
+    <table class="tbl cards">
+      <thead><tr><th>Part</th><th>Part #</th><th>Supplier</th>
+        <th class="num">€ / unit</th><th class="w-act"></th></tr></thead>
+      <tbody>
+      {% for p in parts %}
+        <tr>
+          <td class="strong title-cell">{{ p.name }}</td>
+          <td class="mono dim" data-label="Part #">{{ p.part_number or '—' }}</td>
+          <td class="dim" data-label="Supplier">{{ p.sup or '—' }}</td>
+          <td class="mono num" data-label="€ / unit">{{ p.unit_price|money if p.unit_price is not none else '—' }}</td>
+          <td class="acts">
+            <button class="btn mini" onclick="openDialog('dlg-cpart', this)"
+              data-action="{{ url_for('part_save') }}"
+              data-id="{{ p.id }}" data-name="{{ p.name }}"
+              data-part_number="{{ p.part_number or '' }}"
+              data-supplier_id="{{ p.supplier_id or '' }}"
+              data-unit_price="{{ p.unit_price if p.unit_price is not none else '' }}"
+              data-notes="{{ p.notes or '' }}">Edit</button>
+            <form method="post" action="{{ url_for('part_delete', pid=p.id) }}"
+              onsubmit="return confirm('Delete part {{ p.name }}? Session lines using it are removed too.')">
+              <button class="btn mini danger" aria-label="Delete">✕</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty">No parts match.</div>{% endif %}
+  </div>
+</section>
+
+<section class="col">
+  <div class="bar-row">
+    <form class="inline-form" method="get">
+      <input type="hidden" name="pq" value="{{ pq }}">
+      <input name="sq" value="{{ sq }}" placeholder="Search supplier">
+      <button class="btn">Filter</button>
+    </form>
+    <div class="spacer"></div>
+    <button class="btn prime" onclick="openDialog('dlg-csupplier', this)"
+      data-action="{{ url_for('supplier_save') }}">+ Supplier</button>
+  </div>
+  <div class="panel">
+    {% if suppliers %}
+    <table class="tbl cards">
+      <thead><tr><th>Supplier</th><th>Contact</th><th class="w-act"></th></tr></thead>
+      <tbody>
+      {% for su in suppliers %}
+        <tr>
+          <td class="strong title-cell">{{ su.name }}
+            {% if su.website %}<br><a class="dim ext" target="_blank"
+              href="{{ su.website if su.website.startswith('http') else 'https://' + su.website }}">{{ su.website }}</a>{% endif %}
+          </td>
+          <td class="dim" data-label="Contact">{{ su.email or '' }}{% if su.email and su.phone %}<br>{% endif %}{{ su.phone or '' }}</td>
+          <td class="acts">
+            <button class="btn mini" onclick="openDialog('dlg-csupplier', this)"
+              data-action="{{ url_for('supplier_save') }}"
+              data-id="{{ su.id }}" data-name="{{ su.name }}"
+              data-website="{{ su.website or '' }}" data-email="{{ su.email or '' }}"
+              data-phone="{{ su.phone or '' }}" data-notes="{{ su.notes or '' }}">Edit</button>
+            <form method="post" action="{{ url_for('supplier_delete', sid=su.id) }}"
+              onsubmit="return confirm('Delete supplier {{ su.name }}? Parts keep existing but lose the link.')">
+              <button class="btn mini danger" aria-label="Delete">✕</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty">No suppliers match.</div>{% endif %}
+  </div>
+</section>
+</div>
+
+<dialog id="dlg-cpart" class="dlg">
+  <form method="post" action="{{ url_for('part_save') }}">
+    <h3 class="dlg-title">Part</h3>
+    <input type="hidden" name="id">
+    <label>Name *<input name="name" required></label>
+    <div class="grid2">
+      <label>Part number<input name="part_number"></label>
+      <label>Unit price (€)<input name="unit_price" inputmode="decimal"></label>
+    </div>
+    <label>Supplier
+      <select name="supplier_id">
+        <option value="">(none)</option>
+        {% for su in all_suppliers %}<option value="{{ su.id }}">{{ su.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Notes<input name="notes"></label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Save part</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-csupplier" class="dlg">
+  <form method="post" action="{{ url_for('supplier_save') }}">
+    <h3 class="dlg-title">Supplier</h3>
+    <input type="hidden" name="id">
+    <label>Name *<input name="name" required></label>
+    <div class="grid2">
+      <label>Website<input name="website"></label>
+      <label>Email<input name="email"></label>
+      <label>Phone<input name="phone"></label>
+      <label>Notes<input name="notes"></label>
+    </div>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Save supplier</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if s else 'Log' }} session — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ 'Edit session' if s else 'Log session' }}</h1>
+    <div class="plate-sub">{{ v.name }} · work order</div></div>
+  <div class="plate-odo"><div class="odo mono">{{ v.odometer_km|km }}</div></div>
+</header>
+{% include "_tabs.html" %}
+
+<form method="post" action="{{ url_for('session_save', vid=v.id) }}"
+      enctype="multipart/form-data" class="panel form-page">
+  {% if s %}<input type="hidden" name="id" value="{{ s.id }}">{% endif %}
+
+  <div class="grid4">
+    <label>Date *<input type="date" name="date" required
+      value="{{ s.date if s else today }}"></label>
+    <label>Odometer (km) *<input name="odometer_km" required inputmode="decimal"
+      value="{{ s.odometer_km if s else v.odometer_km|int }}"></label>
+    <label class="span2">Title<input name="title" placeholder="Oil service, brake job…"
+      value="{{ s.title if s else '' }}"></label>
+  </div>
+  <label>Notes<textarea name="notes" rows="3">{{ s.notes if s else '' }}</textarea></label>
+
+  <h3 class="sect">Parts used</h3>
+  <table class="tbl lines cards" id="lines">
+    <thead><tr><th>Part</th><th class="num w-qty">Qty</th>
+      <th class="num w-price">€ / unit</th><th class="w-act"></th></tr></thead>
+    <tbody>
+      {% for ln in lines %}
+      <tr>
+        <td data-label="Part"><select name="line_part" class="part-select">
+          <option value="">—</option>
+          {% for p in parts %}
+          <option value="{{ p.id }}" data-price="{{ p.unit_price if p.unit_price is not none else '' }}"
+            {% if p.id == ln.part_id %}selected{% endif %}>{{ p.name }}{% if p.part_number %} [{{ p.part_number }}]{% endif %}{% if p.sup %} — {{ p.sup }}{% endif %}</option>
+          {% endfor %}
+        </select></td>
+        <td data-label="Qty"><input name="line_qty" class="num" value="{{ '%g'|format(ln.qty) }}"></td>
+        <td data-label="€ / unit"><input name="line_price" class="num" value="{{ '%.2f'|format(ln.unit_price) }}"></td>
+        <td class="acts"><button type="button" class="btn mini danger"
+            onclick="this.closest('tr').remove()">✕</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="btn-row">
+    <button type="button" class="btn" onclick="addLine()">+ Add part line</button>
+    <button type="button" class="btn ghost" onclick="openDialog('dlg-part', this)">New part…</button>
+  </div>
+
+  <h3 class="sect">Schedule items covered
+    <span class="hint-inline">life bars recalculate from the newest covering session</span></h3>
+  {% if items %}
+  <div class="check-grid">
+    {% for it in items %}
+    <label class="check"><input type="checkbox" name="items" value="{{ it.id }}"
+      {% if it.id in done %}checked{% endif %}> {{ it.name }}</label>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">No schedule items for this vehicle yet.</div>
+  {% endif %}
+
+  <h3 class="sect">Attachments <span class="hint-inline">photos, invoices, docs</span></h3>
+  {% if attach %}
+  <ul class="attach-list">
+    {% for a in attach %}
+    <li><a href="{{ url_for('attachment', aid=a.id) }}" target="_blank">{{ a.filename }}</a>
+      <label class="check danger-check"><input type="checkbox" name="delete_att"
+        value="{{ a.id }}"> remove</label></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <input type="file" name="attachments" multiple>
+
+  <div class="grid4" style="margin-top:1.2rem">
+    <label>Labor cost (€)<input name="labor_cost" inputmode="decimal"
+      value="{{ s.labor_cost if s and s.labor_cost else '0' }}"></label>
+  </div>
+
+  <div class="dlg-btns">
+    <a class="btn ghost" href="{{ url_for('sessions_list', vid=v.id) }}">Cancel</a>
+    <button class="btn prime">{{ 'Save session' if s else 'Log session' }}</button>
+  </div>
+</form>
+
+<template id="line-tpl">
+  <tr>
+    <td data-label="Part"><select name="line_part" class="part-select">
+      <option value="">—</option>
+      {% for p in parts %}
+      <option value="{{ p.id }}" data-price="{{ p.unit_price if p.unit_price is not none else '' }}">{{ p.name }}{% if p.part_number %} [{{ p.part_number }}]{% endif %}{% if p.sup %} — {{ p.sup }}{% endif %}</option>
+      {% endfor %}
+    </select></td>
+    <td data-label="Qty"><input name="line_qty" class="num" value="1"></td>
+    <td data-label="€ / unit"><input name="line_price" class="num" value=""></td>
+    <td class="acts"><button type="button" class="btn mini danger"
+        onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>
+</template>
+
+<dialog id="dlg-part" class="dlg">
+  <form onsubmit="return apiCreate(event, 'parts')">
+    <h3 class="dlg-title">New part</h3>
+    <label>Name *<input name="name" required></label>
+    <div class="grid2">
+      <label>Part number<input name="part_number"></label>
+      <label>Unit price (€)<input name="unit_price" inputmode="decimal"></label>
+    </div>
+    <label>Supplier
+      <select name="supplier_id" id="part-supplier">
+        <option value="">(none)</option>
+        {% for su in suppliers %}<option value="{{ su.id }}">{{ su.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="button" class="btn ghost mini" onclick="openDialog('dlg-supplier', this)">New supplier…</button>
+    <label>Notes<input name="notes"></label>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Create part</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-supplier" class="dlg">
+  <form onsubmit="return apiCreate(event, 'suppliers')">
+    <h3 class="dlg-title">New supplier</h3>
+    <label>Name *<input name="name" required></label>
+    <div class="grid2">
+      <label>Website<input name="website"></label>
+      <label>Email<input name="email"></label>
+      <label>Phone<input name="phone"></label>
+      <label>Notes<input name="notes"></label>
+    </div>
+    <div class="dlg-btns">
+      <button type="button" class="btn ghost" onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="btn prime">Create supplier</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

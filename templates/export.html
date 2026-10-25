@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Export — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ v.name }}</h1>
+    <div class="plate-sub">export &amp; reports</div></div>
+</header>
+{% include "_tabs.html" %}
+
+<section class="panel export-grid">
+  <a class="export-card" href="{{ url_for('exp_pdf', vid=v.id) }}">
+    <div class="ex-title">Service history</div>
+    <div class="ex-kind mono">PDF</div>
+    <p>Full report: vehicle data, schedule status, every session with parts
+       and costs, fuel average. The stamped service book, but honest.</p>
+  </a>
+  <a class="export-card" href="{{ url_for('exp_sessions', vid=v.id) }}">
+    <div class="ex-title">Sessions</div>
+    <div class="ex-kind mono">CSV</div>
+    <p>One row per part line, with dates, part numbers, suppliers and costs.
+       Opens straight into Excel / LibreOffice.</p>
+  </a>
+  <a class="export-card" href="{{ url_for('exp_fuel', vid=v.id) }}">
+    <div class="ex-title">Fuel log</div>
+    <div class="ex-kind mono">CSV</div>
+    <p>All fill-ups for this vehicle.</p>
+  </a>
+  <a class="export-card" href="{{ url_for('exp_parts') }}">
+    <div class="ex-title">Parts catalog</div>
+    <div class="ex-kind mono">CSV</div>
+    <p>All parts with part numbers, prices and supplier contact info —
+       the reorder sheet. Shared across vehicles.</p>
+  </a>
+</section>
+{% endblock %}

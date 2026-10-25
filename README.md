@@ -19,7 +19,8 @@ the money pit you are.
   or supplier inline while logging a session
 - **Fuel log** with l/100 km calculated between full tanks
 - **Job guides** - import step-by-step procedures (`.jgb.json` bundles: input conditions,
-  WARNING/CAUTION/NOTE, a drawing per paragraph), work them per vehicle on your phone with
+  WARNING/CAUTION/NOTE, a drawing or a 3D model view per paragraph, with torque tags on the
+  bolts and a view per step), work them per vehicle on your phone with
   sign-offs and record fields saved in the ledger, and finish the job straight into a session
 - **Search and filters** - sessions by title, notes, part, part number, supplier and date range
 - **Exports** - PDF service history with a full cost summary (parts, labour, fuel, grand total,
@@ -51,6 +52,13 @@ docker compose up --build -d
 podman build -t greasebook .
 podman run -d --name greasebook -p 8000:8000 -v ./greasebook-data:/data:Z greasebook
 ```
+
+**Persistent storage:** the container keeps everything in `/data` (`/data/garage.db`, plus
+`attachments/` and `secret_key`). To use an existing `garage.db`, bind-mount **the folder that
+holds it** onto `/data`, e.g. `-v /srv/garage:/data:Z` or `volumes: ["/srv/garage:/data:Z"]` in
+the compose file. Mount the folder, not the single file: SQLite writes its journal next to the
+database, and attachments and the session secret would otherwise be lost when the container is
+recreated.
 
 > Running **inside an LXC container**? Skip nested containers and use `install.sh`. Rootless
 > Podman inside LXC runs into nested user-namespace and AppArmor restrictions.

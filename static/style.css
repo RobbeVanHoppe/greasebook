@@ -464,6 +464,8 @@ body.jg-working .jg-para { grid-template-columns: minmax(0, 1fr); }
 body.jg-working .jg-figcol { position: static; order: 2; }
 .jg-zoom { width: min(96vw, 1100px); max-width: none; }
 .jg-zoom-body { overflow: auto; max-height: 75vh; }
+.jg-show3d { min-height: 0; padding: .2rem .6rem; font-size: .78rem; }
+.jg-fig .jg3d { --jg3d-tq: var(--accent); }
 @media (max-width: 780px) {
   .jg-zoom-body svg { width: 220%; }
 }

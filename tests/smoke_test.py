@@ -94,6 +94,25 @@ with app.app_context():
     assert q("SELECT odometer_km FROM vehicles WHERE id=1")[0]["odometer_km"] == 106000
 print("job guides OK")
 
+# 3D figures: a view must name a model in the bundle; the run page loads the viewer
+model = {"format": "jg-model/1", "parts": [{"id": "p", "type": "box", "size": [1, 1, 1]}],
+         "bolts": [{"id": "b", "spec": "10 N·m", "at": [[0, 0, 0]]}]}
+b3d = dict(bundle, to="TEST-JG-3D", models={"m": model},
+           figures={"f1": {"title": "3D", "callouts": [], "view": {"model": "m", "torque": ["b"]}}})
+bad = dict(b3d, figures={"f1": {"title": "3D", "callouts": [], "view": {"model": "nope"}}})
+for b, want in ((bad, 0), (b3d, 1)):
+    ok(c.post("/jobs/import", data={"bundle": (io.BytesIO(json.dumps(b).encode()), "t.jgb.json")},
+              content_type="multipart/form-data"))
+    with app.app_context():
+        assert len(q("SELECT id FROM job_guides WHERE to_number='TEST-JG-3D'")) == want
+with app.app_context():
+    gid = q("SELECT id FROM job_guides WHERE to_number='TEST-JG-3D'")[0]["id"]
+r3 = ok(c.post("/vehicle/1/jobs/start", data={"guide_id": str(gid)}))
+page = ok(c.get(r3.headers["Location"])).get_data(as_text=True)
+assert 'class="jg3d"' in page and "jg3d.js" in page and '"jg-model/1"' in page
+assert c.get("/static/vendor/three/three.module.min.js").status_code == 200
+print("3D job guide figures OK")
+
 for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",
              "/vehicle/1/fuel", "/catalog", "/vehicle/1/export",
              "/jobs", "/vehicle/1/jobs", "/runs/1"]:

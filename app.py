@@ -1145,7 +1145,8 @@ def api_suppliers():
 #
 # A job guide (JG) is a step-by-step procedure imported as a "jg-bundle/1"
 # JSON file: input conditions, numbered steps with WARNING/CAUTION/NOTE,
-# one figure per paragraph (SVG inlined). A run is one time you do the job
+# one figure per paragraph (SVG inlined, or a 3D view onto a jg-model/1
+# model rendered by static/jg3d.js). A run is one time you do the job
 # on a vehicle; ticks and record fields live on the run, and finishing it
 # logs a maintenance session.
 
@@ -1176,8 +1177,19 @@ def parse_bundle(raw):
     missing = [k for k in JG_REQUIRED if k not in jg]
     if missing:
         return None, "Bundle is missing: " + ", ".join(missing)
+    models = jg.setdefault("models", {})
+    if not isinstance(models, dict) or any(
+            not isinstance(m, dict) or m.get("format") != "jg-model/1"
+            or not isinstance(m.get("parts"), list) for m in models.values()):
+        return None, "Bundle models must be jg-model/1 objects with a parts list."
     for fid, f in jg["figures"].items():
-        f["svg"] = clean_svg(f.get("svg", ""))
+        view = f.get("view")
+        if view is not None:
+            # 3D figure: a view (plain data) onto one of the bundle's models
+            if not isinstance(view, dict) or view.get("model") not in models:
+                return None, f"Figure {fid}: its 3D view names no model in the bundle."
+        else:
+            f["svg"] = clean_svg(f.get("svg", ""))
     return jg, None
 
 

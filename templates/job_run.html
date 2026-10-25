@@ -9,7 +9,11 @@
   {% set f = jg.figures[fid] %}
   {% if f %}
   <figure class="jg-fig">
+    {% if f.view %}
+    <div class="jg3d" data-view='{{ f.view|tojson }}' tabindex="-1"><noscript><div class="jg3d-msg">The 3D figure needs JavaScript.</div></noscript></div>
+    {% else %}
     <button type="button" class="jg-svg" data-zoom aria-label="Enlarge figure {{ figno[fid] }}">{{ f.svg|safe }}</button>
+    {% endif %}
     <figcaption>Figure {{ figno[fid] }}. {{ f.title }}</figcaption>
     <table class="jg-legend"><tbody>
       {% for n, t in f.callouts %}<tr><td class="mono">{{ n }}</td><td>{{ t }}</td></tr>{% endfor %}
@@ -70,7 +74,7 @@
     <div class="jg-steps">
       <h4 class="jg-ph">{{ p.n }} {{ p.title }}</h4>
       {% for s in p.steps %}
-      <div class="jg-step-wrap" data-i="{{ ns.i }}">{% set ns.i = ns.i + 1 %}
+      <div class="jg-step-wrap" data-i="{{ ns.i }}"{% if s.view %} data-view='{{ s.view|tojson }}'{% endif %}>{% set ns.i = ns.i + 1 %}
         {{ alerts(s.alerts) }}
         <div class="jg-step {% if s.n in done %}done{% endif %}">
           <span class="jg-no mono">{{ s.n }}.</span>
@@ -81,6 +85,7 @@
               <label class="check"><input type="checkbox" data-step="{{ s.n }}" {% if s.n in done %}checked{% endif %}> <span>Done</span></label>
               {% if s.hold %}<span class="badge due-badge">HOLD POINT</span>{% endif %}
               {% if s.record %}<span class="badge jg-recb mono">{{ s.record }}</span>{% endif %}
+              {% if s.view %}<button type="button" class="btn jg-show3d">Show in 3D</button>{% endif %}
             </div>
             {% if s.record %}
             <label class="jg-rec">{{ recnames.get(s.record, s.record) }}
@@ -163,6 +168,16 @@
   root.querySelectorAll("[data-zoom]").forEach(b => b.addEventListener("click", () => {
     zd.querySelector(".jg-zoom-body").innerHTML = b.innerHTML; zd.showModal();
   }));
+  // 3D figures: a step may override its paragraph's view (camera, highlights, torque tags)
+  function stepView(w, scroll) {
+    const fig = w.closest(".jg-para").querySelector(".jg3d");
+    if (!fig || !fig.jg3d) return;
+    const base = JSON.parse(fig.dataset.view);
+    fig.jg3d.setView(w.dataset.view ? Object.assign(base, JSON.parse(w.dataset.view)) : base);
+    if (scroll) fig.scrollIntoView({block: "nearest", behavior: "smooth"});
+  }
+  root.querySelectorAll(".jg-show3d").forEach(b => b.addEventListener("click", () => stepView(b.closest(".jg-step-wrap"), true)));
+  document.addEventListener("jg3d:ready", () => { if (document.body.classList.contains("jg-working")) stepView(wraps[i]); });
   // step-by-step mode
   const wraps = [...root.querySelectorAll(".jg-step-wrap")], nav = document.querySelector(".jg-worknav");
   const mbtn = document.getElementById("jg-mode"), key = "jgpos:" + rid;
@@ -170,6 +185,7 @@
   function show() {
     wraps.forEach((w, k) => w.hidden = k !== i);
     root.querySelectorAll(".jg-para").forEach(p => p.hidden = !p.contains(wraps[i]));
+    stepView(wraps[i]);
     document.getElementById("jg-pos").textContent = `step ${i + 1} of ${wraps.length}`;
     document.getElementById("jg-prev").disabled = i === 0;
     document.getElementById("jg-next").textContent = i === wraps.length - 1 ? "Finish ›" : "Next ›";
@@ -179,7 +195,11 @@
     document.body.classList.toggle("jg-working", work);
     mbtn.setAttribute("aria-pressed", work); mbtn.textContent = work ? "Full page" : "Step by step";
     nav.hidden = !work;
-    if (work) show(); else { wraps.forEach(w => w.hidden = false); root.querySelectorAll(".jg-para").forEach(p => p.hidden = false); }
+    if (work) show();
+    else {
+      wraps.forEach(w => w.hidden = false); root.querySelectorAll(".jg-para").forEach(p => p.hidden = false);
+      root.querySelectorAll(".jg3d").forEach(f => f.jg3d && f.jg3d.setView(JSON.parse(f.dataset.view)));
+    }
     window.scrollTo(0, root.offsetTop);
   }
   mbtn.addEventListener("click", () => setMode(!document.body.classList.contains("jg-working")));
@@ -190,4 +210,14 @@
   });
 })();
 </script>
+{% if jg.models %}
+<script type="application/json" id="jg-models">{{ jg.models|tojson }}</script>
+<script type="importmap">{"imports": {"three": "{{ url_for('static', filename='vendor/three/three.module.min.js') }}",
+  "three/addons/": "{{ url_for('static', filename='vendor/three/addons/') }}"}}</script>
+<script type="module">
+import { mountAll } from "{{ url_for('static', filename='jg3d.js') }}";
+mountAll(document.getElementById("jg"), JSON.parse(document.getElementById("jg-models").textContent));
+document.dispatchEvent(new Event("jg3d:ready"));
+</script>
+{% endif %}
 {% endblock %}

@@ -28,6 +28,9 @@
       <button class="btn mini danger" aria-label="Delete wiring set">✕</button></form>
   </div>
   <div class="wd-list">
+    {% if s.data and '"oem": {' in s.data %}
+    <a class="wd-row master" href="{{ url_for('wiring_oem', sid=s.id) }}"><span class="mono dim">Z</span><span>Factory wiring — every factory connector, 3D map, workshop manual section Z</span></a>
+    {% endif %}
     {% for S in systems %}
     <a class="wd-row {% if S.id == '00' %}master{% endif %}" href="{{ url_for('wiring_system', sid=s.id, sys_id=S.id) }}">
       <span class="mono dim">{{ S.to|replace('1MX5NA-2-', '') }}</span><span>{{ S.title }}</span></a>

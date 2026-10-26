@@ -7,9 +7,9 @@
   <div class="plate-odo">
     {% if avg %}
     <div class="odo mono">{{ '%.2f'|format(avg) }} <small>l/100km</small></div>
-    <div class="odo-sub">{{ '%.1f'|format(lit) }} l over {{ km|int }} km between full tanks</div>
+    <div class="odo-sub">{{ '%.1f'|format(lit) }} l over {{ km|int }} km between full tanks{% if reset_km is not none %}, since {{ reset_km|km }}{% endif %}</div>
     {% else %}
-    <div class="odo-sub">average appears after two full-tank fill-ups</div>
+    <div class="odo-sub">average appears after two full-tank fill-ups{% if reset_km is not none %} from {{ reset_km|km }}{% endif %}</div>
     {% endif %}
   </div>
 </header>
@@ -24,6 +24,18 @@
     <button class="btn">Filter</button>
   </form>
   <div class="spacer"></div>
+  {% if reset_km is not none %}
+  <form method="post" action="{{ url_for('fuel_reset', vid=v.id) }}">
+    <input type="hidden" name="undo" value="1">
+    <button class="btn ghost">Undo reset</button>
+  </form>
+  {% endif %}
+  {% if rows %}
+  <form method="post" action="{{ url_for('fuel_reset', vid=v.id) }}"
+        onsubmit="return confirm('Restart the average from your latest full tank? Fill-ups stay in the log.')">
+    <button class="btn">Reset average</button>
+  </form>
+  {% endif %}
   <button class="btn prime" onclick="openDialog('dlg-fuel', this)"
     data-action="{{ url_for('fuel_save', vid=v.id) }}"
     data-date="{{ today }}" data-odometer_km="{{ v.odometer_km|int }}"
@@ -34,7 +46,7 @@
   {% if rows %}
   <table class="tbl cards">
     <thead><tr><th>Date</th><th>Odometer</th><th class="num">Liters</th>
-      <th class="num">Cost</th><th class="num">€ / l</th><th>Tank</th><th class="w-act"></th></tr></thead>
+      <th class="num">Cost</th><th class="num">€ / l</th><th class="num">l/100km</th><th>Tank</th><th class="w-act"></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
@@ -43,6 +55,9 @@
         <td class="mono num" data-label="Liters">{{ '%g'|format(r.liters) }}</td>
         <td class="mono num" data-label="Cost">{{ r.total_cost|money if r.total_cost else '—' }}</td>
         <td class="mono num dim" data-label="€ / l">{% if r.total_cost and r.liters %}{{ '%.3f'|format(r.total_cost / r.liters) }}{% else %}—{% endif %}</td>
+        <td class="mono num{% if reset_km is not none and r.id in segs and segs[r.id][2] < reset_km %} dim{% endif %}" data-label="l/100km"
+            {% if r.id in segs %}title="{{ '%.1f'|format(segs[r.id][1]) }} l over {{ segs[r.id][0]|int }} km"{% endif %}>
+          {% if r.id in per %}{{ '%.2f'|format(per[r.id]) }}{% else %}—{% endif %}</td>
         <td data-label="Tank">{{ 'full' if r.full_tank else 'partial' }}</td>
         <td class="acts">
           <button class="btn mini" onclick="openDialog('dlg-fuel', this)"

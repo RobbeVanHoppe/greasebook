@@ -111,6 +111,10 @@ CREATE TABLE IF NOT EXISTS fuel_log(
     full_tank INTEGER NOT NULL DEFAULT 1,
     notes TEXT
 );
+CREATE TABLE IF NOT EXISTS fuel_resets(
+    vehicle_id INTEGER PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    odometer_km REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS job_guides(
     id INTEGER PRIMARY KEY,
     to_number TEXT NOT NULL UNIQUE,
@@ -264,20 +268,38 @@ def item_status(item, current_km):
     return st
 
 
-def fuel_stats(vehicle_id):
-    """(km driven, liters burned) measured between full-tank fills."""
+def fuel_segments(vehicle_id):
+    """{fill-up id: (km, liters, start odometer)} for each full fill closing a
+    full-to-full segment. Liters include partial fills inside the segment."""
     rows = q("SELECT * FROM fuel_log WHERE vehicle_id=? "
              "ORDER BY odometer_km, date", (vehicle_id,))
-    km = lit = acc = 0.0
+    segs = {}
+    acc = 0.0
     prev_full = None
     for r in rows:
         if prev_full is not None:
             acc += r["liters"]
         if r["full_tank"]:
             if prev_full is not None and r["odometer_km"] > prev_full["odometer_km"]:
-                km += r["odometer_km"] - prev_full["odometer_km"]
-                lit += acc
+                segs[r["id"]] = (r["odometer_km"] - prev_full["odometer_km"], acc,
+                                 prev_full["odometer_km"])
             prev_full, acc = r, 0.0
+    return segs
+
+
+def fuel_reset_km(vehicle_id):
+    r = q1("SELECT odometer_km FROM fuel_resets WHERE vehicle_id=?", (vehicle_id,))
+    return r["odometer_km"] if r else None
+
+
+def fuel_stats(vehicle_id):
+    """(km driven, liters burned) between full-tank fills since the last reset."""
+    reset = fuel_reset_km(vehicle_id)
+    km = lit = 0.0
+    for d, l, start in fuel_segments(vehicle_id).values():
+        if reset is None or start >= reset:
+            km += d
+            lit += l
     return km, lit
 
 
@@ -998,9 +1020,31 @@ def fuel_list(vid):
         params.append(d2)
     sql += " ORDER BY odometer_km DESC, date DESC"
     rows = q(sql, params)
+    segs = fuel_segments(vid)
+    per = {fid: l / d * 100 for fid, (d, l, _) in segs.items()}
     km, lit = fuel_stats(vid)
     avg = (lit / km * 100) if km > 0 else None
-    return render_template("fuel.html", v=v, rows=rows, km=km, lit=lit, avg=avg)
+    return render_template("fuel.html", v=v, rows=rows, km=km, lit=lit, avg=avg,
+                           per=per, segs=segs, reset_km=fuel_reset_km(vid))
+
+
+@app.route("/vehicle/<int:vid>/fuel/reset", methods=["POST"])
+def fuel_reset(vid):
+    get_vehicle(vid)
+    if request.form.get("undo"):
+        x("DELETE FROM fuel_resets WHERE vehicle_id=?", (vid,))
+        flash("Average reset undone; all fill-ups count again.")
+        return redirect(url_for("fuel_list", vid=vid))
+    last = q1("SELECT MAX(odometer_km) o FROM fuel_log WHERE vehicle_id=? AND full_tank=1",
+              (vid,))["o"]
+    if last is None:
+        flash("Log a full-tank fill-up first; the average restarts from there.", "error")
+        return redirect(url_for("fuel_list", vid=vid))
+    x("INSERT INTO fuel_resets(vehicle_id, odometer_km) VALUES(?,?) "
+      "ON CONFLICT(vehicle_id) DO UPDATE SET odometer_km=excluded.odometer_km",
+      (vid, last))
+    flash(f"Average reset. It restarts from the full tank at {last:.0f} km.")
+    return redirect(url_for("fuel_list", vid=vid))
 
 
 @app.route("/vehicle/<int:vid>/fuel/save", methods=["POST"])

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_wd_macros.html" import pin_table, zoombox %}
+{% block title %}{{ S.to }} — Wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ S.title }}</h1>
+    <div class="plate-sub mono">{{ S.to }} · change {{ W.row.change }} · {{ W.row.date }}</div></div>
+</header>
+
+<section class="bar-row">
+  <a class="btn" href="{{ url_for('wiring_library') }}">‹ Wiring</a>
+  <select class="grow" aria-label="Wiring diagram" onchange="location.href=this.value">
+    {% for T in W.M.systems %}
+    <option value="{{ url_for('wiring_system', sid=sid, sys_id=T.id) }}" {% if T.id == S.id %}selected{% endif %}>{{ T.to|replace('1MX5NA-2-', '') }} · {{ T.title }}</option>
+    {% endfor %}
+  </select>
+</section>
+
+<section class="panel wd-fig" id="wd" data-sid="{{ sid }}"
+         data-unit-url="{{ url_for('wiring_unit', sid=sid, uid='__U__') }}"
+         data-sys-url="{{ url_for('wiring_system', sid=sid, sys_id='__S__') }}">
+  {{ zoombox(svg, 'Tap a wire or connector for details · tap a frame to open the unit') }}
+  <div class="wd-info" id="wd-info" hidden></div>
+</section>
+
+{% if S.intro %}<section class="panel">{% for p in S.intro %}<p>{{ p }}</p>{% endfor %}</section>{% endif %}
+
+{% if units %}
+<h2 class="wd-h">Units in this diagram</h2>
+<section class="panel wd-list">
+  {% for u in units %}
+  <a class="wd-row" href="{{ url_for('wiring_unit', sid=sid, uid=u.id) }}"><span class="mono dim">{{ u.id }}</span>
+    <span>{{ u.name }}</span><span class="tag">{{ 'BOARD' if u.board else 'MODULE' }}</span></a>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% for t, txt in S.alerts or [] %}
+<div class="wd-al {{ t }}"><span class="h">{{ {'warning':'WARNING','caution':'CAUTION','note':'NOTE','oi':'OPEN ITEM'}[t] }}</span>{{ txt }}</div>
+{% endfor %}
+
+{% if conns %}
+<h2 class="wd-h">Connectors, splices and terminals</h2>
+<section class="panel">{% for c in conns %}{{ pin_table(W, sid, c) }}{% endfor %}</section>
+{% endif %}
+
+{% if hars %}
+<h2 class="wd-h">Harnesses</h2>
+<section class="panel">
+{% for h in hars %}
+  <div class="wd-conn" id="h-{{ h.id }}"><h3>{{ h.id }} — {{ h.name }}</h3>
+  <p class="hint">Cable: {{ h.cable }} · length: {{ h.length }}{% if h.note %} · {{ h.note }}{% endif %}</p>
+  <div class="tscroll"><table class="tbl wd-tbl"><thead><tr><th>Wire</th><th>From</th><th>To</th><th>Net</th><th>Size · colour</th></tr></thead><tbody>
+  {% for w in h.wires %}
+    <tr id="w-{{ w.id }}"><td class="mono strong">{{ w.id }}</td><td>{{ W.label(w.a) }}</td><td>{{ W.label(w.b) }}</td>
+      <td><button type="button" class="wd-net" data-trace="{{ w.a }}">{{ w.net }}</button></td><td class="dim">{{ w.size }} · {{ w.colour }}</td></tr>
+  {% endfor %}
+  </tbody></table></div></div>
+{% endfor %}
+</section>
+{% endif %}
+
+{% if S.checks %}
+<h2 class="wd-h">Checks</h2>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl"><thead><tr><th>Check</th><th>Condition / between</th><th>Expected</th><th>Source</th></tr></thead><tbody>
+{% for r in S.checks %}<tr><td class="mono">{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td class="dim">{{ r[3] }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+<script type="application/json" id="wd-model">{{ W.M|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='wd.js') }}"></script>{% endblock %}

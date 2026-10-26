@@ -503,3 +503,37 @@ body.jg-working .jg-figcol { position: static; order: 2; }
 .jg-fig .warn, .jg-zoom .warn { fill: var(--fig-seal); stroke: var(--fig-ink); stroke-width: .8; }
 .jg-fig .tq, .jg-zoom .tq { fill: none; stroke: var(--fig-ink); stroke-width: 2; }
 .jg-fig .tqv, .jg-zoom .tqv { font: 700 24px var(--mono); fill: var(--fig-ink); }
+
+/* ---- wiring diagrams (templates/wiring_*.html, static/wd.js) */
+.wd-set-head { display: flex; gap: .8rem; align-items: flex-start; justify-content: space-between; margin-bottom: .6rem; }
+.wd-list { display: flex; flex-direction: column; gap: 2px; }
+.wd-row { display: flex; gap: .8rem; align-items: center; padding: .55rem .6rem; min-height: var(--tap);
+  color: var(--ink); border-radius: var(--radius); }
+.wd-row:hover { background: var(--panel-2); }
+.wd-row.master { border-left: 3px solid var(--accent); }
+.wd-row .tag { margin-left: auto; font: 600 .7rem var(--mono); color: var(--accent); }
+.wd-h { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+.wd-fig { padding: .6rem; }
+.wd-zoom-bar, .wd-pick { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: .5rem; font-size: .8rem; }
+.wd-scroll { overflow: auto; max-height: 78vh; background: #fff; border-radius: var(--radius);
+  -webkit-overflow-scrolling: touch; }
+.wd-scroll svg, .wd-scroll img { display: block; width: 100%; height: auto; }
+.wd-scroll [data-w], .wd-scroll [data-c], .wd-scroll [data-u] { cursor: pointer; }
+.wd-scroll .wr:hover > path:first-child { stroke: #1f43c4; stroke-width: 7; }
+.wd-scroll .cb:hover > rect:first-child { stroke: #1f43c4; stroke-width: 3; }
+.wd-scroll svg.tracing .wr:not(.tr), .wd-scroll svg.tracing .cb:not(.tr) { opacity: .18; }
+.wd-scroll .wr.tr > path:first-child { stroke: #f2a33c; stroke-width: 8; }
+.wd-scroll .cb.tr > rect:first-child { stroke: #f2a33c; stroke-width: 3.5; }
+.wd-info { position: relative; margin-top: .7rem; padding: .7rem; border: 1px solid var(--accent);
+  border-radius: var(--radius); background: var(--panel-2); }
+.wd-info h3 { margin: 0 2.5rem .4rem 0; font-size: 1rem; }
+.wd-x { position: absolute; top: .4rem; right: .4rem; }
+.wd-conn { margin-bottom: 1.2rem; }
+.wd-conn h3 { font-size: .95rem; margin: .2rem 0; }
+.tscroll { overflow-x: auto; }
+.wd-tbl td, .wd-tbl th { padding: .35rem .5rem; font-size: .85rem; vertical-align: top; }
+.wd-net { font: 600 .8rem var(--mono); color: var(--accent); background: none; border: 1px solid var(--edge);
+  border-radius: 3px; padding: .1rem .35rem; cursor: pointer; }
+.wd-al { margin: .5rem 0; padding: .6rem .8rem; border-left: 4px solid var(--dim); background: var(--panel); font-size: .9rem; }
+.wd-al .h { font: 700 .75rem var(--mono); margin-right: .5rem; }
+.wd-al.warning { border-color: var(--due); } .wd-al.caution { border-color: var(--warn); } .wd-al.oi { border-color: #a974d6; }

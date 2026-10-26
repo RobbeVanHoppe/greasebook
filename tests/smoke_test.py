@@ -113,9 +113,41 @@ assert 'class="jg3d"' in page and "jg3d.js" in page and '"jg-model/1"' in page
 assert c.get("/static/vendor/three/three.module.min.js").status_code == 200
 print("3D job guide figures OK")
 
+# wiring: gzip bundle with a diagram, a board and a module; svg sanitised; pages render
+import gzip  # noqa: E402
+wd = {"format": "wd-bundle/1", "set": "TEST", "title": "Test car", "change": 2, "date": "today",
+      "model": {"units": [{"id": "B", "name": "Board", "zone": "Z1", "system": "S1", "board": "b"},
+                          {"id": "M", "name": "Module", "zone": "Z1", "system": "S1"}],
+                "connectors": [{"id": "B-J1", "unit": "B", "ref": "J1", "name": "Out", "kind": "connector", "part": "hdr",
+                                "mate": "hdr", "pins": [{"pin": "1", "net": "SIG"}]},
+                               {"id": "M-H", "unit": "M", "ref": "H", "name": "Pins", "kind": "connector", "part": "hdr",
+                                "mate": "hdr", "pins": [{"pin": "1", "net": "SIG"}]}],
+                "harnesses": [{"id": "H1", "name": "Lead", "system": "S1", "cable": "c", "length": "1 m",
+                               "wires": [{"id": "H1-01", "a": "B-J1.1", "b": "M-H.1", "net": "SIG", "size": "0.5", "colour": "RD"}]}],
+                "systems": [{"id": "S1", "to": "WD-1", "title": "Sys", "units": ["B", "M"]}]},
+      "figs": {"WD-1": '<svg onload="alert(1)"><g data-w="H1-01"><path d="M0,0 L9,0"/></g><script>x</script></svg>'},
+      "boards": {"B": {"status": "ok", "title": "Board", "rev": "A",
+                       "sheets": [{"title": "Root", "svg": "<svg><rect/><script>y</script></svg>"}],
+                       "layout": [{"title": "Perf", "img": "javascript:alert(1)"}], "pcb": [],
+                       "bom": [["Ref", "Value"], ["R1", "10k"]]}}}
+ok(c.post("/wiring/import", data={"bundle": (io.BytesIO(gzip.compress(json.dumps(wd).encode())), "w.wdb.json.gz")},
+          content_type="multipart/form-data"))
+with app.app_context():
+    ws = q("SELECT * FROM wiring_sets")[0]
+    bd = q("SELECT data FROM wiring_boards")[0]["data"]
+    assert "<script" not in ws["data"] and "onload" not in ws["data"] and "<script" not in bd
+    assert "javascript:" not in bd, "only png data URIs may pass"
+sid = ws["id"]
+assert b"H1-01" in ok(c.get(f"/wiring/{sid}/wd/S1")).data
+assert b"Root" in ok(c.get(f"/wiring/{sid}/unit/B")).data
+assert b"10k" in ok(c.get(f"/wiring/{sid}/unit/B?tab=bom")).data
+assert b"wdcard" in ok(c.get(f"/wiring/{sid}/unit/M")).data
+assert c.get(f"/wiring/{sid}/unit/NOPE").status_code == 404
+print("wiring OK")
+
 for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",
              "/vehicle/1/fuel", "/catalog", "/vehicle/1/export",
-             "/jobs", "/vehicle/1/jobs", "/runs/1"]:
+             "/jobs", "/vehicle/1/jobs", "/runs/1", "/wiring"]:
     assert c.get(page).status_code == 200, page
 print("all pages render OK")
 print("SMOKE TEST PASS")

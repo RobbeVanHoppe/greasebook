@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Wiring</h1>
+    <div class="plate-sub">pin-to-pin wiring diagrams, board schematics and layouts</div></div>
+</header>
+
+<section class="bar-row">
+  <form class="inline-form" method="post" action="{{ url_for('wiring_import') }}"
+        enctype="multipart/form-data">
+    <input type="file" name="bundle" accept=".gz,.json,application/json,application/gzip" class="grow"
+           aria-label="Wiring bundle (.wdb.json.gz)" required>
+    <button class="btn prime">Import bundle</button>
+  </form>
+</section>
+<p class="hint">Import a <span class="mono">.wdb.json.gz</span> bundle (built by
+  <span class="mono">to/jg-web/tools/bundle_wd.py</span>). Importing a set that already
+  exists replaces it with the new change.</p>
+
+{% for s, systems in rows %}
+<section class="panel wd-set">
+  <div class="wd-set-head">
+    <div><div class="strong">{{ s.title }}</div>
+      <div class="dim mono">{{ s.set_key }} · change {{ s.change }} · {{ s.date }} · imported {{ s.imported }}</div></div>
+    <form method="post" action="{{ url_for('wiring_delete', sid=s.id) }}"
+          onsubmit="return confirm('Delete wiring set {{ s.set_key }}?')">
+      <button class="btn mini danger" aria-label="Delete wiring set">✕</button></form>
+  </div>
+  <div class="wd-list">
+    {% for S in systems %}
+    <a class="wd-row {% if S.id == '00' %}master{% endif %}" href="{{ url_for('wiring_system', sid=s.id, sys_id=S.id) }}">
+      <span class="mono dim">{{ S.to|replace('1MX5NA-2-', '') }}</span><span>{{ S.title }}</span></a>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="panel"><div class="empty">No wiring yet. Import a bundle above.</div></section>
+{% endfor %}
+{% endblock %}

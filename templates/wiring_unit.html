@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_wd_macros.html" import pin_table, zoombox %}
+{% block title %}{{ u.id }} — Wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ u.short or u.name }}</h1>
+    <div class="plate-sub">{{ u.name }} · zone {{ u.zone }}{% if bd and bd.rev %} · rev {{ bd.rev }}{% endif %}</div></div>
+</header>
+
+<section class="bar-row">
+  <a class="btn" href="{{ url_for('wiring_library') }}">‹ Wiring</a>
+  {% for T in wds %}<a class="btn" href="{{ url_for('wiring_system', sid=sid, sys_id=T.id) }}">WD {{ T.to|replace('1MX5NA-2-', '') }}</a>{% endfor %}
+</section>
+
+{% if bd and bd.status == 'pending' %}
+<div class="flash">Board detail not released yet: the KiCad schematic and the perfboard layout for this unit are still being drawn. Its connectors are below.</div>
+{% endif %}
+
+<nav class="tabs">
+  {% for key, name, its in tabs %}
+  <a class="{% if key == tab %}on{% endif %}" href="{{ url_for('wiring_unit', sid=sid, uid=u.id, tab=key) }}">{{ name }}</a>
+  {% endfor %}
+</nav>
+
+{% if items %}
+<section class="panel wd-fig" id="wd">
+  {% if items|length > 1 %}
+  <div class="wd-pick">{% for it in items %}<a class="btn mini {% if loop.index0 == n %}prime{% endif %}" href="{{ url_for('wiring_unit', sid=sid, uid=u.id, tab=tab, n=loop.index0) }}">{{ it.title }}</a>{% endfor %}</div>
+  {% endif %}
+  {% set it = items[n] %}
+  {% if it.svg %}{{ zoombox(it.svg, it.title) }}{% else %}{{ zoombox('<img src="' ~ it.img ~ '" alt="' ~ it.title ~ '">', it.title) }}{% endif %}
+</section>
+{% elif tab == 'bom' %}
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl">
+  <thead><tr>{% for h in bd.bom[0] %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for r in bd.bom[1:] %}<tr>{% for c in r %}<td class="{{ 'mono' if loop.index0 in (0, 3) else '' }}">{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div></section>
+{% else %}
+{% if card %}
+<section class="panel wd-fig" id="wd">{{ zoombox(card, 'Pinout card — module pins, our nets, the wire and far end on each pin') }}</section>
+{% endif %}
+<section class="panel">{% for c in conns %}{{ pin_table(W, sid, c) }}{% else %}<div class="empty">No connectors.</div>{% endfor %}</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script type="application/json" id="wd-model">{{ W.M|tojson }}</script>
+<script src="{{ url_for('static', filename='wd.js') }}"></script>{% endblock %}

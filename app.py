@@ -14,6 +14,7 @@ Env:
 """
 
 import csv
+import gzip
 import io
 import json
 import logging
@@ -22,6 +23,7 @@ import os
 import secrets
 import textwrap
 from datetime import date, datetime
+from html import escape
 
 from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
                    request, send_file, send_from_directory, session, url_for)
@@ -127,6 +129,21 @@ CREATE TABLE IF NOT EXISTS job_runs(
     session_id INTEGER REFERENCES sessions(id) ON DELETE SET NULL,
     steps TEXT NOT NULL DEFAULT '[]',
     records TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS wiring_sets(
+    id INTEGER PRIMARY KEY,
+    set_key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    change INTEGER NOT NULL DEFAULT 0,
+    date TEXT,
+    data TEXT NOT NULL,
+    imported TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS wiring_boards(
+    set_id INTEGER NOT NULL REFERENCES wiring_sets(id) ON DELETE CASCADE,
+    unit TEXT NOT NULL,
+    data TEXT NOT NULL,
+    PRIMARY KEY(set_id, unit)
 );
 """
 
@@ -1343,6 +1360,214 @@ def job_run_delete(rid):
     x("DELETE FROM job_runs WHERE id=?", (rid,))
     flash("Job run deleted (a session it logged is kept).")
     return redirect(url_for("jobs_list", vid=r["vehicle_id"]))
+
+
+# ---------------------------------------------------------------- wiring diagrams
+#
+# A wiring set is imported as a "wd-bundle/1" file (gzip or plain JSON, built by
+# to/jg-web/tools/bundle_wd.py): the wd-model/1 master (units, connectors with
+# pins and nets, harnesses with wires, systems = one WD each), the pin-to-pin
+# diagram SVG of every WD, and per-unit board detail (KiCad schematic sheets,
+# perfboard layout, PCB, BOM). Units without a board are modules; their page is
+# a pinout card drawn from the model.
+
+WD_MODEL_KEYS = ("units", "connectors", "harnesses", "systems")
+
+
+def parse_wd_bundle(raw):
+    if raw[:2] == b"\x1f\x8b":
+        try:
+            raw = gzip.decompress(raw)
+        except OSError:
+            return None, "That file is a damaged gzip archive."
+    try:
+        b = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None, "That file is not valid JSON."
+    if not isinstance(b, dict) or b.get("format") != "wd-bundle/1":
+        return None, ("Not a wiring bundle. Build it with "
+                      "to/jg-web/tools/bundle_wd.py (format wd-bundle/1).")
+    m = b.get("model")
+    if not isinstance(m, dict) or any(not isinstance(m.get(k), list) for k in WD_MODEL_KEYS):
+        return None, "Bundle model must have units, connectors, harnesses and systems."
+    if not isinstance(b.get("figs"), dict) or not b.get("set"):
+        return None, "Bundle is missing its diagrams or its set name."
+    b["figs"] = {k: clean_svg(v) for k, v in b["figs"].items() if isinstance(v, str)}
+    boards = b.get("boards") or {}
+    for bd in boards.values():
+        for key in ("sheets", "layout", "pcb"):
+            items = []
+            for it in bd.get(key) or []:
+                if it.get("svg"):
+                    it["svg"] = clean_svg(it["svg"])
+                elif not str(it.get("img", "")).startswith("data:image/png;base64,"):
+                    continue
+                items.append(it)
+            bd[key] = items
+    b["boards"] = boards
+    return b, None
+
+
+class Wiring:
+    """Index over one imported wd-model/1 master."""
+
+    def __init__(self, row):
+        self.row = row
+        d = json.loads(row["data"])
+        self.M, self.figs = d["model"], d["figs"]
+        self.unit = {u["id"]: u for u in self.M["units"]}
+        self.conn = {c["id"]: c for c in self.M["connectors"]}
+        self.sys = {s["id"]: s for s in self.M["systems"]}
+        self.pin_wires, self.wire_har = {}, {}
+        for h in self.M["harnesses"]:
+            for w in h["wires"]:
+                self.wire_har[w["id"]] = h
+                for e in (w["a"], w["b"]):
+                    self.pin_wires.setdefault(e, []).append(w)
+
+    def c_of(self, key):
+        return self.conn.get(key.split(".", 1)[0])
+
+    def label(self, key):
+        c = self.c_of(key)
+        return f'{c["unit"]} {c["ref"]}.{key.split(".", 1)[1]}' if c else key
+
+    def pins(self, c):
+        """Rows of (pin, far ends [(wire, harness, far key)]) for a connector."""
+        out = []
+        for p in c["pins"]:
+            k = f'{c["id"]}.{p["pin"]}'
+            far = [(w, self.wire_har[w["id"]], w["b"] if w["a"] == k else w["a"])
+                   for w in self.pin_wires.get(k, [])]
+            out.append((p, k, far))
+        return out
+
+    def unit_systems(self, uid):
+        """WDs that draw this unit in full."""
+        return [s for s in self.M["systems"] if uid in (s.get("dia") or s["units"])]
+
+
+def module_card(W, uid):
+    """Pinout card for an off-the-shelf module: body with its pin headers, our net on
+    each pin, and the wire and far end leaving each pin."""
+    conns = [c for c in W.M["connectors"] if c["unit"] == uid]
+    rows = []
+    for c in conns:
+        rows.append(("head", c))
+        rows += [("pin", r) for r in W.pins(c)]
+    pitch, x0, bw = 26, 30, 230
+    h = 90 + pitch * len(rows)
+    farw = max([len(f"{w['id']} {w['colour']} → {W.label(k)}") for _, (_, _, fr) in
+                [r for r in rows if r[0] == "pin"] for (w, _, k) in fr] + [20]) * 7.2
+    width = int(x0 + bw + 60 + farw + 20)
+    u = W.unit[uid]
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {h}" width="{width}" height="{h}" '
+         f'font-family="Arial, Helvetica, sans-serif" class="wdcard">',
+         f'<rect width="{width}" height="{h}" fill="#ffffff"/>',
+         f'<rect x="{x0}" y="20" width="{bw}" height="{h - 40}" rx="8" fill="#2a5d3a" stroke="#111417" stroke-width="2"/>',
+         f'<text x="{x0 + 12}" y="42" font-size="14" font-weight="bold" fill="#ffffff">{escape(u.get("short") or u["name"])}</text>']
+    y = 60
+    for kind, r in rows:
+        if kind == "head":
+            o.append(f'<text x="{x0 + 12}" y="{y + 17}" font-size="11" fill="#d7e8da">{escape(r["ref"])} · {escape(r["part"][:34])}</text>')
+        else:
+            p, k, far = r
+            cy = y + pitch / 2
+            o.append(f'<rect x="{x0 + bw - 22}" y="{cy - 7}" width="14" height="14" fill="#d4af37" stroke="#7a6214"/>'
+                     f'<text x="{x0 + 12}" y="{cy + 4}" font-size="12" font-family="Consolas, monospace" font-weight="bold" fill="#ffffff">{escape(p["pin"])}</text>'
+                     f'<text x="{x0 + 70}" y="{cy + 4}" font-size="11" font-family="Consolas, monospace" fill="#ffffff">{escape(p["net"])}</text>')
+            for i, (w, hh, fk) in enumerate(far[:1]):
+                o.append(f'<line x1="{x0 + bw - 8}" y1="{cy}" x2="{x0 + bw + 50}" y2="{cy}" stroke="#111417" stroke-width="3"/>'
+                         f'<text x="{x0 + bw + 58}" y="{cy + 4}" font-size="11" font-family="Consolas, monospace" fill="#111417">'
+                         f'{escape(w["id"])} {escape(w["colour"])} → {escape(W.label(fk))}{" (+%d)" % (len(far) - 1) if len(far) > 1 else ""}</text>')
+        y += pitch
+    o.append("</svg>")
+    return "\n".join(o)
+
+
+def get_wiring(sid):
+    row = q1("SELECT * FROM wiring_sets WHERE id=?", (sid,)) or abort(404)
+    return Wiring(row)
+
+
+@app.route("/wiring")
+def wiring_library():
+    sets = q("SELECT id, set_key, title, change, date, imported, data FROM wiring_sets ORDER BY set_key")
+    rows = [(s, json.loads(s["data"])["model"]["systems"]) for s in sets]
+    return render_template("wiring_library.html", rows=rows)
+
+
+@app.route("/wiring/import", methods=["POST"])
+def wiring_import():
+    f = request.files.get("bundle")
+    if not f or not f.filename:
+        flash("Choose a .wdb.json.gz bundle to import.", "error")
+        return redirect(url_for("wiring_library"))
+    b, err = parse_wd_bundle(f.read())
+    if err:
+        flash(err, "error")
+        return redirect(url_for("wiring_library"))
+    data = json.dumps({"model": b["model"], "figs": b["figs"]})
+    vals = (b.get("title") or b["set"], int(b.get("change") or 0), b.get("date", ""), data, today_str())
+    old = q1("SELECT id FROM wiring_sets WHERE set_key=?", (b["set"],))
+    if old:
+        x("UPDATE wiring_sets SET title=?, change=?, date=?, data=?, imported=? WHERE id=?", vals + (old["id"],))
+        sid = old["id"]
+        x("DELETE FROM wiring_boards WHERE set_id=?", (sid,))
+    else:
+        sid = x("INSERT INTO wiring_sets(title,change,date,data,imported,set_key) VALUES(?,?,?,?,?,?)",
+                vals + (b["set"],))
+    for uid, bd in b["boards"].items():
+        x("INSERT INTO wiring_boards(set_id,unit,data) VALUES(?,?,?)", (sid, uid, json.dumps(bd)))
+    flash(f"Wiring {b['set']} change {vals[1]} imported: {len(b['figs'])} diagrams, "
+          f"{sum(1 for v in b['boards'].values() if v.get('status') == 'ok')} boards with detail.")
+    return redirect(url_for("wiring_library"))
+
+
+@app.route("/wiring/<int:sid>/delete", methods=["POST"])
+def wiring_delete(sid):
+    s = q1("SELECT set_key FROM wiring_sets WHERE id=?", (sid,)) or abort(404)
+    x("DELETE FROM wiring_sets WHERE id=?", (sid,))
+    flash(f"Deleted wiring set {s['set_key']}.")
+    return redirect(url_for("wiring_library"))
+
+
+@app.route("/wiring/<int:sid>/wd/<sys_id>")
+def wiring_system(sid, sys_id):
+    W = get_wiring(sid)
+    S = W.sys.get(sys_id) or abort(404)
+    conns = [c for c in W.M["connectors"] if c["unit"] in S["units"]]
+    hars = [h for h in W.M["harnesses"] if h["system"] == S["id"]]
+    units = [W.unit[u] for u in (S.get("dia") or S["units"]) if u in W.unit]
+    return render_template("wiring_system.html", W=W, S=S, sid=sid, conns=conns, hars=hars,
+                           units=units, svg=W.figs.get(S["to"], ""))
+
+
+@app.route("/wiring/<int:sid>/unit/<uid>")
+def wiring_unit(sid, uid):
+    W = get_wiring(sid)
+    u = W.unit.get(uid) or abort(404)
+    brow = q1("SELECT data FROM wiring_boards WHERE set_id=? AND unit=?", (sid, uid))
+    bd = json.loads(brow["data"]) if brow else None
+    tabs = []
+    if bd and bd.get("status") == "ok":
+        tabs += [("sch", "Schematic", bd["sheets"]), ("perf", "Perfboard", bd["layout"]),
+                 ("pcb", "PCB", bd["pcb"])]
+        tabs = [t for t in tabs if t[2]]
+        if bd.get("bom"):
+            tabs.append(("bom", "BOM", None))
+    tabs.append(("pins", "Connectors", None))
+    tab = request.args.get("tab") or tabs[0][0]
+    items = next((t[2] for t in tabs if t[0] == tab), None)
+    try:
+        n = min(max(int(request.args.get("n", 0)), 0), len(items) - 1) if items else 0
+    except ValueError:
+        n = 0
+    conns = [c for c in W.M["connectors"] if c["unit"] == uid]
+    card = module_card(W, uid) if not bd else ""
+    return render_template("wiring_unit.html", W=W, u=u, sid=sid, bd=bd, tabs=tabs, tab=tab,
+                           items=items, n=n, conns=conns, card=card, wds=W.unit_systems(uid),
+                           home=W.sys.get(u["system"]))
 
 
 # ---------------------------------------------------------------- export

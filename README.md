@@ -22,6 +22,10 @@ the money pit you are.
   WARNING/CAUTION/NOTE, a drawing or a 3D model view per paragraph, with torque tags on the
   bolts and a view per step), work them per vehicle on your phone with
   sign-offs and record fields saved in the ledger, and finish the job straight into a session
+- **Wiring** - import a wiring bundle (`.wdb.json.gz`): pin-to-pin wiring diagrams you can zoom and
+  tap (wire → from/to, net, size, colour, harness; connector → pinout with far ends), a circuit tracer
+  that lights up every wire on a net, and per-unit detail: KiCad schematic sheets, perfboard layout,
+  PCB and BOM for boards, a pinout card for off-the-shelf modules
 - **Search and filters** - sessions by title, notes, part, part number, supplier and date range
 - **Exports** - PDF service history with a full cost summary (parts, labour, fuel, grand total,
   cost per km and per year, biggest spends), plus CSV for sessions, fuel and the parts catalogue

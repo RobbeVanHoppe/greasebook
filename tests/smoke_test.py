@@ -145,6 +145,21 @@ assert b"wdcard" in ok(c.get(f"/wiring/{sid}/unit/M")).data
 assert c.get(f"/wiring/{sid}/unit/NOPE").status_code == 404
 print("wiring OK")
 
+# fuel: per fill-up l/100km and average reset
+for odo, lit in [("100000", "40"), ("100500", "35"), ("101000", "30")]:
+    ok(c.post("/vehicle/1/fuel/save", data={"date": "2026-01-01", "odometer_km": odo,
+                                             "liters": lit, "full_tank": "1"}))
+html = ok(c.get("/vehicle/1/fuel")).get_data(as_text=True)
+assert "7.00" in html and "6.00" in html and "6.50 <small>" in html, "per fill-up + average"
+ok(c.post("/vehicle/1/fuel/reset"))
+ok(c.post("/vehicle/1/fuel/save", data={"date": "2026-02-01", "odometer_km": "101400",
+                                         "liters": "20", "full_tank": "1"}))
+html = ok(c.get("/vehicle/1/fuel")).get_data(as_text=True)
+assert "5.00 <small>" in html, "average only counts fills after the reset"
+ok(c.post("/vehicle/1/fuel/reset", data={"undo": "1"}))
+assert "6.07 <small>" in ok(c.get("/vehicle/1/fuel")).get_data(as_text=True)
+print("fuel OK")
+
 for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",
              "/vehicle/1/fuel", "/catalog", "/vehicle/1/export",
              "/jobs", "/vehicle/1/jobs", "/runs/1", "/wiring"]:

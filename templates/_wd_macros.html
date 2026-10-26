@@ -2,6 +2,8 @@
 <div class="wd-conn" id="c-{{ c.id }}">
   <h3>{{ c.unit }} {{ c.ref }} — {{ c.name }}</h3>
   <p class="hint">Part: {{ c.part }} · mates with: {{ c.mate }}{% if c.note %} · {{ c.note }}{% endif %}</p>
+  {% if c.oem and W.oem %}{% set oc = c.oem.ref.split('.')[0] %}
+  <p class="oem-link">Factory side: <a href="{{ url_for('wiring_oem_conn', sid=sid, cid=oc) }}">{{ c.oem.ref }}</a> — {{ c.oem.text }}</p>{% endif %}
   <div class="tscroll"><table class="tbl wd-tbl">
     <thead><tr><th>Pin</th><th>Net</th><th>Wire</th><th>Far end</th><th>Size · colour</th></tr></thead>
     <tbody>

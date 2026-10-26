@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_oem_macros.html" import src, map3d, map3d_script %}
+{% block title %}Factory wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Factory wiring</h1>
+    <div class="plate-sub">every factory connector and wire from the workshop manual wiring diagrams</div></div>
+</header>
+<section class="bar-row"><a class="btn" href="{{ url_for('wiring_library') }}">‹ Wiring</a></section>
+{{ src(O) }}
+
+{{ map3d(O, markers, 'Where the connectors are — drag to turn, tap a dot') }}
+
+<h2 class="wd-h">Systems (manual section Z)</h2>
+<section class="panel wd-list">
+  {% for S in O.M.systems %}
+  <a class="wd-row" href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=S.id) }}"><span class="mono dim">{{ S.id }}</span>
+    <span>{{ S.title }}</span><span class="tag">{{ S.z|join(', ') if S.z is not string else S.z }}</span></a>
+  {% endfor %}
+</section>
+
+<h2 class="wd-h">All factory connectors</h2>
+<section class="bar-row"><input id="oemq" class="grow" placeholder="Filter: code, name, colour (e.g. E1-03, relay, L/Y)" aria-label="Filter connectors"></section>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl" id="oemtbl">
+  <thead><tr><th>Code</th><th>Name</th><th>Harness</th><th>Where</th><th>Systems</th></tr></thead><tbody>
+  {% for c in conns %}
+  <tr data-q="{{ (c.code ~ ' ' ~ c.name ~ ' ' ~ (c.pins|map(attribute='colour')|join(' ')))|lower }}">
+    <td class="mono strong"><a href="{{ url_for('wiring_oem_conn', sid=sid, cid=c.id) }}">{{ c.code }}</a>{% if c.variant_of %} <span class="dim">({{ c.systems|join(', ') }})</span>{% endif %}</td>
+    <td>{{ c.name }}{% if c.variant %} <span class="dim">· {{ c.variant }}</span>{% endif %}</td>
+    <td class="mono">{{ c.harness }}</td><td class="dim">{{ (c.loc or {}).text }}</td>
+    <td class="mono">{% for s in c.systems %}<a href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=s) }}">{{ s }}</a>{% if not loop.last %} {% endif %}{% endfor %}</td></tr>
+  {% endfor %}
+</tbody></table></div></section>
+<script>
+document.getElementById("oemq").addEventListener("input", e => {
+  const v = e.target.value.trim().toLowerCase();
+  document.querySelectorAll("#oemtbl tbody tr").forEach(r => r.hidden = v && !r.dataset.q.includes(v));
+});
+</script>
+{% endblock %}
+{% block scripts %}{{ map3d_script(sid) }}{% endblock %}

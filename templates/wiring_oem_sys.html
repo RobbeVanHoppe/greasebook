@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_wd_macros.html" import zoombox %}
+{% from "_oem_macros.html" import src %}
+{% block title %}{{ S.id }} — Factory wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ S.title }}</h1>
+    <div class="plate-sub mono">section Z · {{ S.id }} · {{ S.z|join(', ') }} · PDF p. {{ S.pdf|join(', ') }}{% if S.variant and S.variant != 'all' %} · {{ S.variant }}{% endif %}</div></div>
+</header>
+<section class="bar-row">
+  <a class="btn" href="{{ url_for('wiring_oem', sid=sid) }}">‹ Factory wiring</a>
+  <select class="grow" aria-label="Factory system" onchange="location.href=this.value">
+    {% for T in O.M.systems %}<option value="{{ url_for('wiring_oem_sys', sid=sid, sys_id=T.id) }}" {% if T.id == S.id %}selected{% endif %}>{{ T.id }} · {{ T.title }}</option>{% endfor %}
+  </select>
+</section>
+{{ src(O) }}
+{% for n in S.notes or [] %}<div class="wd-al note"><span class="h">NOTE</span>{{ n }}</div>{% endfor %}
+{% if S.same_as %}<div class="wd-al note"><span class="h">NOTE</span>Same wiring as <a href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=S.same_as) }}">{{ S.same_as }}</a>.</div>{% endif %}
+
+{% if svg %}
+<section class="panel wd-fig" id="wd">{{ zoombox(svg, 'Pin to pin, Mazda colours · tap a connector to open it') }}</section>
+{% endif %}
+
+{% if conns %}
+<h2 class="wd-h">Connectors</h2>
+<section class="panel wd-list">
+  {% for c in conns %}
+  <a class="wd-row" href="{{ url_for('wiring_oem_conn', sid=sid, cid=c.id) }}"><span class="mono strong">{{ c.code }}</span>
+    <span>{{ c.name }}</span><span class="tag">{{ c.harness }}</span></a>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if S.nets %}
+<h2 class="wd-h">Circuits</h2>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl"><thead><tr><th>Circuit</th><th>Colour</th><th>Path</th></tr></thead><tbody>
+{% for n in S.nets %}
+  <tr><td class="strong">{{ n.name }}{% if n.variant %} <span class="dim">· {{ n.variant }}</span>{% endif %}</td>
+    <td class="mono">{{ n.colour }}</td>
+    <td class="sm">{% for seg in n.segs %}<span class="mono">{{ O.label(seg[0]) }} → {{ O.label(seg[1]) }}</span>{% if seg[2] %} <span class="dim">{{ seg[2] }}{% if seg[3] %} ({{ seg[3] }}){% endif %}</span>{% endif %}<br>{% endfor %}
+      {% for t in n.taps or [] %}<span class="dim">tap: {{ t[0] }} → {{ t[1] }}</span><br>{% endfor %}
+      {% if n.note %}<span class="dim">{{ n.note }}</span>{% endif %}{% if n.uncertain %}<br><span class="oem-unc">Uncertain: {{ n.uncertain }}</span>{% endif %}</td></tr>
+{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+
+{% if S.grounds %}
+<h2 class="wd-h">Ground points</h2>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl"><tbody>
+{% for g in S.grounds %}<tr><td class="mono strong">{{ g.id if g.id is defined else g[0] }}</td><td>{{ g.text if g.text is defined else g[1] }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+<script type="application/json" id="oem-links">{{ {"conn": url_for('wiring_oem_conn', sid=sid, cid='__C__'), "sys": url_for('wiring_oem_sys', sid=sid, sys_id='__S__')}|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='wd.js') }}"></script>
+<script>
+(() => {   // factory diagrams: a tap on a connector or an off-page box opens it
+  const L = JSON.parse(document.getElementById("oem-links").textContent);
+  document.querySelector("#wd .wd-scroll")?.addEventListener("click", e => {
+    const c = e.target.closest("[data-c]");
+    if (!c) return;
+    const id = c.dataset.c;
+    if (id.startsWith("→")) location.href = L.sys.replace("__S__", encodeURIComponent(id.slice(1)));
+    else if (id === "GND") location.href = L.sys.replace("__S__", "Y");
+    else if (id !== "BAT") location.href = L.conn.replace("__C__", encodeURIComponent(id));
+  });
+})();
+</script>{% endblock %}

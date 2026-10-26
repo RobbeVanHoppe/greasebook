@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_wd_macros.html" import zoombox %}
+{% from "_oem_macros.html" import src, map3d, map3d_script %}
+{% block title %}{{ c.code }} — Factory wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ c.code }} · {{ c.name }}</h1>
+    <div class="plate-sub">{{ O.M.harness_codes.get(c.harness, c.harness) }} harness{% if c.colour %} · {{ c.colour }} connector{% endif %}{% if c.variant %} · {{ c.variant }}{% endif %}</div></div>
+</header>
+<section class="bar-row">
+  <a class="btn" href="{{ url_for('wiring_oem', sid=sid) }}">‹ Factory wiring</a>
+  {% for s in c.systems %}<a class="btn" href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=s) }}">System {{ s }}</a>{% endfor %}
+</section>
+{{ src(O) }}
+
+{% for x, u in taps %}
+<div class="wd-al caution"><span class="h">PROJECT TAP</span>The project connects here: <a href="{{ url_for('wiring_unit', sid=sid, uid=x.unit) }}#c-{{ x.id }}">{{ x.unit }} {{ x.ref }}</a> — {{ u.text }}</div>
+{% endfor %}
+
+<section class="panel">
+  <dl class="oem-kv"><dt>Where</dt><dd>{{ (c.loc or {}).text or 'Not shown on the location pages' }}</dd>
+    {% if c.note %}<dt>Note</dt><dd>{{ c.note }}</dd>{% endif %}
+    {% if c.variants %}<dt>Variants</dt><dd>{% for k, v in c.variants.items() %}<span class="mono">{{ k }}</span> {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</dd>{% endif %}
+    {% if c.uncertain %}<dt>Uncertain</dt><dd class="oem-unc">{{ c.uncertain }}</dd>{% endif %}
+    <dt>Manual</dt><dd>{% for s in c.systems %}{{ O.sys[s].z|join(', ') if s in O.sys else s }}{% if not loop.last %} · {% endif %}{% endfor %}</dd></dl>
+</section>
+
+{% if face %}
+<section class="panel wd-fig">{{ zoombox(face, 'Face view as printed — seen from the harness side') }}</section>
+{% endif %}
+{% if c.fuses %}
+<h2 class="wd-h">Fuses</h2>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl"><tbody>
+{% for f in c.fuses %}<tr>{% for v in f %}<td class="{{ 'mono' if loop.index0 != 1 else '' }}">{{ v }}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+
+<h2 class="wd-h">Pins and where each wire goes</h2>
+<section class="panel"><div class="tscroll"><table class="tbl wd-tbl">
+  <thead><tr><th>Pin</th><th>Colour</th><th>Circuit</th><th>Goes to</th></tr></thead><tbody>
+  {% for p, ends in pins %}
+  {% set base = p.colour %}
+  <tr><td class="mono strong">{{ p.pin }}</td>
+    <td>{% if p.colour %}<span class="oem-sw" style="--c1: {{ mazda(p.colour)[0] or '#ccc' }}; --c2: {{ mazda(p.colour)[1] or mazda(p.colour)[0] or '#ccc' }}"></span> <span class="mono">{{ p.cell or p.colour }}</span>{% endif %}</td>
+    <td>{% for e in ends %}<a href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=e.sys) }}">{{ e.sys }}</a> · {{ e.net }}{% if not loop.last %}<br>{% endif %}{% else %}<span class="dim">—</span>{% endfor %}</td>
+    <td>{% for e in ends %}{% set t = O.target(e.to) %}{% if t[0] == 'c' %}<a href="{{ url_for('wiring_oem_conn', sid=sid, cid=t[1]) }}">{{ O.label(e.to) }}</a>{% elif t[0] == 's' %}<a href="{{ url_for('wiring_oem_sys', sid=sid, sys_id=t[1]) }}">{{ O.label(e.to) }}</a>{% else %}{{ O.label(e.to) }}{% endif %}
+      <span class="dim">{{ e.colour }}{% if e.harness %} ({{ e.harness }}){% endif %}</span>{% if not loop.last %}<br>{% endif %}{% else %}<span class="dim">—</span>{% endfor %}</td></tr>
+  {% endfor %}
+</tbody></table></div></section>
+
+{{ map3d(O, markers, 'Location (estimate) — the orange dot is this connector') }}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='wd.js') }}"></script>{{ map3d_script(sid) }}{% endblock %}

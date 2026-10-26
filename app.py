@@ -553,6 +553,7 @@ app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024  # 64 MB uploads
 
 app.jinja_env.filters["km"] = fmt_km
 app.jinja_env.filters["money"] = fmt_money
+app.jinja_env.globals["mazda"] = lambda c: mazda_colour(c)
 
 
 @app.errorhandler(Exception)
@@ -1405,6 +1406,11 @@ def parse_wd_bundle(raw):
                 items.append(it)
             bd[key] = items
     b["boards"] = boards
+    oem = b.get("oem")
+    if oem is not None:
+        if not isinstance(oem, dict) or (oem.get("model") or {}).get("format") != "oem-model/1":
+            return None, "Bundle factory wiring must be an oem-model/1 model."
+        oem["figs"] = {k: clean_svg(v) for k, v in (oem.get("figs") or {}).items() if isinstance(v, str)}
     return b, None
 
 
@@ -1415,6 +1421,7 @@ class Wiring:
         self.row = row
         d = json.loads(row["data"])
         self.M, self.figs = d["model"], d["figs"]
+        self.oem = OEM(d["oem"]) if d.get("oem") else None
         self.unit = {u["id"]: u for u in self.M["units"]}
         self.conn = {c["id"]: c for c in self.M["connectors"]}
         self.sys = {s["id"]: s for s in self.M["systems"]}
@@ -1507,7 +1514,7 @@ def wiring_import():
     if err:
         flash(err, "error")
         return redirect(url_for("wiring_library"))
-    data = json.dumps({"model": b["model"], "figs": b["figs"]})
+    data = json.dumps({"model": b["model"], "figs": b["figs"], "oem": b.get("oem")})
     vals = (b.get("title") or b["set"], int(b.get("change") or 0), b.get("date", ""), data, today_str())
     old = q1("SELECT id FROM wiring_sets WHERE set_key=?", (b["set"],))
     if old:
@@ -1522,6 +1529,167 @@ def wiring_import():
     flash(f"Wiring {b['set']} change {vals[1]} imported: {len(b['figs'])} diagrams, "
           f"{sum(1 for v in b['boards'].values() if v.get('status') == 'ok')} boards with detail.")
     return redirect(url_for("wiring_library"))
+
+
+# ---- factory (OEM) wiring: transcribed from the workshop manual, section Z
+
+MAZDA_COLOURS = {"B": "#1b1b1b", "W": "#ffffff", "R": "#d0261d", "G": "#2e9a4a", "L": "#2f63d6", "Y": "#f2c400", "BR": "#7a4a22",
+                 "O": "#f08a24", "P": "#ef7fb8", "V": "#8a3fc4", "PU": "#8a3fc4", "GY": "#8c8c8c", "LG": "#8fd18b",
+                 "LB": "#8ecae6", "DG": "#1e5f2e", "DL": "#1d2f80", "T": "#c9a26b", "N": "#e8dcc0"}
+OEM_REF = re.compile(r"^([A-Z](?:-\d[a-z]?)?)([①-⑳㉑-㉟㊱-㊿])")
+
+
+def mazda_colour(code):
+    """(base, stripe) hex colours for a Mazda wire code like 'W/R'; None when unknown."""
+    parts = str(code).strip("()[]<>{}").split("/")
+    base = MAZDA_COLOURS.get(parts[0])
+    return base, (MAZDA_COLOURS.get(parts[1]) if base and len(parts) > 1 else None)
+
+
+class OEM:
+    """Index over the factory wiring model (oem-model/1)."""
+
+    def __init__(self, d):
+        self.M, self.figs = d["model"], d.get("figs") or {}
+        self.conn = {c["id"]: c for c in self.M["connectors"]}
+        self.sys = {s["id"]: s for s in self.M["systems"]}
+        self.ends = {}                # "cid.pin" -> [(system, net, other end)]
+        for S in self.M["systems"]:
+            local = {self.conn[c]["code"] if c in self.conn else c: c for c in S.get("conns", [])}
+            for net in S.get("nets", []):
+                for seg in net["segs"]:
+                    a, b = (self.resolve(local, e) for e in seg[:2])
+                    col = seg[2] if len(seg) > 2 and seg[2] else net.get("colour", "")
+                    har = seg[3] if len(seg) > 3 else ""
+                    for x, y in ((a, b), (b, a)):
+                        self.ends.setdefault(x, []).append({"sys": S["id"], "net": net["name"], "to": y,
+                                                            "colour": col, "harness": har, "note": net.get("note", "")})
+
+    @staticmethod
+    def resolve(local, e):
+        if "." in e and not OEM_REF.match(e) and not e.startswith(("GND", "BAT")):
+            code, pin = e.split(".", 1)
+            return f"{local.get(code, code)}.{pin}"
+        return e
+
+    def label(self, e):
+        m = OEM_REF.match(e)
+        if m:
+            return f"system {m.group(1)} {m.group(2)}"
+        if e.startswith("GND"):
+            return f"ground {e[3:]}"
+        if e.startswith("BAT."):
+            return "battery +"
+        cid, pin = e.split(".", 1)
+        return f"{self.conn[cid]['code'] if cid in self.conn else cid} · {pin}"
+
+    def target(self, e):
+        """(kind, id) link target for an end: ('c', connector id) or ('s', system id)."""
+        m = OEM_REF.match(e)
+        if m:
+            sid = m.group(1)
+            sid = sid if sid in self.sys else next((s for s in self.sys if s.startswith(sid)), None)
+            return ("s", sid) if sid else (None, None)
+        if e.startswith(("GND", "BAT")):
+            return ("s", "Y") if e.startswith("GND") else (None, None)
+        cid = e.split(".", 1)[0]
+        return ("c", cid) if cid in self.conn else (None, None)
+
+    def pins(self, cid):
+        c = self.conn[cid]
+        return [(p, self.ends.get(f"{cid}.{p['pin']}", [])) for p in c.get("pins", [])]
+
+
+def oem_face_svg(c):
+    """Face view(s) of a factory connector as printed in the manual (harness side), cells coloured by wire."""
+    faces = c.get("faces") or {}
+    pins = c.get("pins") if isinstance(c.get("pins"), dict) else {}
+    if not faces:
+        return ""
+    cw, ch, gap, out, x0 = 64, 40, 34, [], 10
+    blocks = []
+    for side, rows in faces.items():
+        w = max(len(r) for r in rows) * cw
+        blocks.append((side, rows, w))
+    W = sum(b[2] for b in blocks) + gap * (len(blocks) - 1) + 20
+    H = max(len(b[1]) for b in blocks) * ch + 48
+    out.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" class="oemface" '
+               f'font-family="Arial, Helvetica, sans-serif">')
+    out.append(f'<rect width="{W}" height="{H}" fill="#ffffff"/>')
+    x = x0
+    for side, rows, w in blocks:
+        out.append(f'<text x="{x}" y="16" font-size="12" font-weight="bold" fill="#111417">{escape(side)}</text>')
+        for r, row in enumerate(rows):
+            for k, t in enumerate(row):
+                cx, cy = x + k * cw, 26 + r * ch
+                if t == "":
+                    continue
+                if t == "X":
+                    out.append(f'<rect x="{cx}" y="{cy}" width="{cw}" height="{ch}" fill="#f1f3f3" stroke="#6b7477"/>'
+                               f'<path d="M{cx},{cy} L{cx + cw},{cy + ch} M{cx + cw},{cy} L{cx},{cy + ch}" stroke="#6b7477"/>')
+                    continue
+                if t == "#":
+                    out.append(f'<rect x="{cx}" y="{cy}" width="{cw}" height="{ch}" fill="#c4cacb" stroke="#6b7477"/>')
+                    continue
+                label = t
+                col = pins.get(t, t) if pins else t
+                first = next((p for p in str(col).split("|") if p != "*"), "*")
+                base, stripe = mazda_colour(first)
+                fill = base or "#f7f7f5"
+                ink = "#ffffff" if base in ("#1b1b1b", "#2f63d6", "#7a4a22", "#8a3fc4", "#1d2f80", "#1e5f2e", "#d0261d", "#2e9a4a") else "#111417"
+                out.append(f'<rect x="{cx}" y="{cy}" width="{cw}" height="{ch}" fill="{fill}" stroke="#111417"/>')
+                if stripe:
+                    out.append(f'<rect x="{cx + cw - 12}" y="{cy}" width="10" height="{ch}" fill="{stripe}" stroke="#111417" stroke-width="0.5"/>')
+                lines = [label] + ([str(col).replace("|", " ")] if pins else [])
+                for i, ln in enumerate(lines):
+                    out.append(f'<text x="{cx + (cw - 12) / 2 + 1}" y="{cy + 17 + i * 14}" text-anchor="middle" font-size="{12 if i == 0 else 10}" '
+                               f'font-weight="{"bold" if i == 0 else "normal"}" fill="{ink if not pins or i else ink}" '
+                               f'font-family="Consolas, Menlo, monospace">{escape(ln.replace("|", " "))}</text>')
+        x += w + gap
+    out.append("</svg>")
+    return "\n".join(out)
+
+
+def oem_markers(O, focus=None):
+    """3D markers for every placed connector (estimated anchors)."""
+    by_anchor = {}
+    for c in O.M["connectors"]:
+        a = (c.get("loc") or {}).get("anchor")
+        if a in O.M["anchors"]:
+            by_anchor.setdefault(a, []).append(c)
+    out = []
+    for a, cs in by_anchor.items():
+        for i, c in enumerate(cs):
+            out.append({"id": c["id"], "code": c["code"], "name": c.get("name", ""), "anchor": a, "i": i, "n": len(cs),
+                        "harness": c.get("harness", ""), "focus": c["id"] == focus})
+    return out
+
+
+@app.route("/wiring/<int:sid>/oem")
+def wiring_oem(sid):
+    W = get_wiring(sid)
+    O = W.oem or abort(404)
+    conns = sorted(O.M["connectors"], key=lambda c: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", c["code"])])
+    return render_template("wiring_oem.html", W=W, O=O, sid=sid, conns=conns, markers=oem_markers(O))
+
+
+@app.route("/wiring/<int:sid>/oem/sys/<sys_id>")
+def wiring_oem_sys(sid, sys_id):
+    W = get_wiring(sid)
+    O = W.oem or abort(404)
+    S = O.sys.get(sys_id) or abort(404)
+    return render_template("wiring_oem_sys.html", W=W, O=O, S=S, sid=sid, svg=O.figs.get(sys_id, ""),
+                           conns=[O.conn[c] for c in S.get("conns", []) if c in O.conn])
+
+
+@app.route("/wiring/<int:sid>/oem/c/<path:cid>")
+def wiring_oem_conn(sid, cid):
+    W = get_wiring(sid)
+    O = W.oem or abort(404)
+    c = O.conn.get(cid) or abort(404)
+    taps = [(x, u) for x in W.M["connectors"] for u in [x.get("oem")] if u and u["ref"].split(".", 1)[0] == c["code"]]
+    return render_template("wiring_oem_conn.html", W=W, O=O, c=c, sid=sid, face=oem_face_svg(c), pins=O.pins(cid),
+                           markers=oem_markers(O, cid), taps=taps)
 
 
 @app.route("/wiring/<int:sid>/delete", methods=["POST"])

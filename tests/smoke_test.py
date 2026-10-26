@@ -126,6 +126,14 @@ wd = {"format": "wd-bundle/1", "set": "TEST", "title": "Test car", "change": 2, 
                                "wires": [{"id": "H1-01", "a": "B-J1.1", "b": "M-H.1", "net": "SIG", "size": "0.5", "colour": "RD"}]}],
                 "systems": [{"id": "S1", "to": "WD-1", "title": "Sys", "units": ["B", "M"]}]},
       "figs": {"WD-1": '<svg onload="alert(1)"><g data-w="H1-01"><path d="M0,0 L9,0"/></g><script>x</script></svg>'},
+      "oem": {"model": {"format": "oem-model/1", "source": {"title": "Manual", "code": "X", "section": "Z", "edition": "test"},
+                        "harness_codes": {"F": "Front"}, "anchors": {"dash": [0, 0, 500]},
+                        "connectors": [{"id": "C-01", "code": "C-01", "name": "Cluster", "harness": "F", "faces": {"F": [["B/Y", "*"]]},
+                                        "pins": [{"pin": "B/Y", "colour": "B/Y"}], "loc": {"anchor": "dash", "text": "dash"}, "systems": ["C"]}],
+                        "systems": [{"id": "C", "title": "Clusters", "z": ["Z-40"], "pdf": [849], "conns": ["C-01"],
+                                     "nets": [{"name": "IG", "colour": "B/Y", "segs": [["GND①", "C-01.B/Y", "B/Y", "F"]]}], "fig": "fig/C.svg"}],
+                        "grounds": []},
+              "figs": {"C": '<svg><g data-c="C-01"/><script>z</script></svg>'}},
       "boards": {"B": {"status": "ok", "title": "Board", "rev": "A",
                        "sheets": [{"title": "Root", "svg": "<svg><rect/><script>y</script></svg>"}],
                        "layout": [{"title": "Perf", "img": "javascript:alert(1)"}], "pcb": [],
@@ -143,6 +151,11 @@ assert b"Root" in ok(c.get(f"/wiring/{sid}/unit/B")).data
 assert b"10k" in ok(c.get(f"/wiring/{sid}/unit/B?tab=bom")).data
 assert b"wdcard" in ok(c.get(f"/wiring/{sid}/unit/M")).data
 assert c.get(f"/wiring/{sid}/unit/NOPE").status_code == 404
+assert b"Cluster" in ok(c.get(f"/wiring/{sid}/oem")).data
+page = ok(c.get(f"/wiring/{sid}/oem/sys/C")).get_data(as_text=True)
+assert "data-c" in page and "<script>z" not in page
+assert b"oemface" in ok(c.get(f"/wiring/{sid}/oem/c/C-01")).data
+assert c.get(f"/wiring/{sid}/oem/c/NOPE").status_code == 404
 print("wiring OK")
 
 for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",

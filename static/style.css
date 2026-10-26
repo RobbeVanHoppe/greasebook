@@ -537,3 +537,17 @@ body.jg-working .jg-figcol { position: static; order: 2; }
 .wd-al { margin: .5rem 0; padding: .6rem .8rem; border-left: 4px solid var(--dim); background: var(--panel); font-size: .9rem; }
 .wd-al .h { font: 700 .75rem var(--mono); margin-right: .5rem; }
 .wd-al.warning { border-color: var(--due); } .wd-al.caution { border-color: var(--warn); } .wd-al.oi { border-color: #a974d6; }
+
+/* ---- factory wiring (templates/wiring_oem*.html, static/oem3d.js) */
+.oem3d-wrap { padding: .6rem; }
+.oem3d { position: relative; width: 100%; height: min(62vh, 520px); border-radius: var(--radius); overflow: hidden; background: #e1e6e5; touch-action: none; }
+.oem3d canvas { display: block; width: 100%; height: 100%; }
+.oem3d-info { margin-top: .5rem; padding: .5rem .7rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--panel-2); }
+.oem-kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .9rem; margin: 0; font-size: .9rem; }
+.oem-kv dt { color: var(--dim); }
+.oem-kv dd { margin: 0; }
+.oem-unc { color: var(--warn); }
+.oem-link { font-size: .85rem; margin: .2rem 0 .4rem; }
+.oem-sw { display: inline-block; width: 26px; height: 10px; vertical-align: middle; border: 1px solid #111;
+  background: linear-gradient(90deg, var(--c1) 0 65%, var(--c2) 65% 100%); }
+.wd-al.note { border-color: var(--accent); }

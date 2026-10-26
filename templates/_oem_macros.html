@@ -1,0 +1,24 @@
+{% macro src(O) -%}
+<p class="hint">Source: {{ O.M.source.title }} {{ O.M.source.code }}, {{ O.M.source.section }} — {{ O.M.source.edition }}.
+  Transcribed by hand from the scanned manual: check colours on the car before cutting. 3D positions are estimates [E].</p>
+{%- endmacro %}
+
+{% macro map3d(O, markers, label) -%}
+<section class="panel oem3d-wrap">
+  <div class="wd-zoom-bar"><span class="dim">{{ label }}</span></div>
+  <div class="oem3d" id="oem3d" aria-label="3D connector map"><noscript><div class="empty">The 3D map needs JavaScript.</div></noscript></div>
+  <div class="oem3d-info" id="oem3d-info" hidden></div>
+</section>
+<script type="application/json" id="oem3d-data">{{ {"anchors": O.M.anchors, "markers": markers}|tojson }}</script>
+{%- endmacro %}
+
+{% macro map3d_script(sid) -%}
+<script type="importmap">{"imports": {"three": "{{ url_for('static', filename='vendor/three/three.module.min.js') }}",
+  "three/addons/": "{{ url_for('static', filename='vendor/three/addons/') }}"}}</script>
+<script type="module">
+import { mount } from "{{ url_for('static', filename='oem3d.js') }}";
+const el = document.getElementById("oem3d");
+if (el) mount(el, JSON.parse(document.getElementById("oem3d-data").textContent),
+  {info: document.getElementById("oem3d-info"), url: "{{ url_for('wiring_oem_conn', sid=sid, cid='__C__') }}"});
+</script>
+{%- endmacro %}

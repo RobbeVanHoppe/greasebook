@@ -166,13 +166,19 @@ function belt(p, S) {
   return out;
 }
 
+function pads(p) {                    // PCB through-hole pads: one flat ring per [x, y, z, outer r, thickness]
+  const ri = p.ri ?? .55, g = new THREE.LatheGeometry([[ri, -.5], [1, -.5], [1, .5], [ri, .5], [ri, -.5]]
+    .map(([r, y]) => new THREE.Vector2(r, y)), 20), q = new THREE.Quaternion();
+  return [{ g, edges: false, inst: p.at.map(([x, y, z, r, h]) => new THREE.Matrix4().compose(new V3(x, y, z), q, new V3(r, h || 1, r))) }];
+}
+
 const BUILD = {
   box: p => [{ g: new THREE.BoxGeometry(...p.size) }],
   cyl: p => [{ g: alongZ(new THREE.CylinderGeometry(p.r2 ?? p.r, p.r, p.h, p.seg || 48)) }],
   lathe: p => [{ g: lathe(p.pts, p.seg) }],
   ext: p => [{ g: ext(p) }],
   tube: p => [{ g: new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p.pts.map(a => new V3(...a))), 64, p.r, 18, false), edges: false }],
-  shell, sprocket, pulley: vpulley, belt,
+  shell, sprocket, pulley: vpulley, belt, pads,
 };
 
 const boltGeo = new Map();
@@ -528,8 +534,8 @@ function setFull(v, on) {
   v.fullBtn.textContent = on ? "✕" : "⤢";
   v.fullBtn.setAttribute("aria-label", on ? "Close full screen" : "Full screen");
   if (on) v.fullBtn.focus({ preventScroll: true });
-  v.hint.textContent = on ? (COARSE ? "Drag to turn · pinch to zoom · two fingers to pan · tap a bolt" : "Drag to turn · scroll to zoom · right-drag to pan · click a bolt")
-                          : (COARSE ? "Tap to open in 3D · tap an orange tag for its torque" : "Drag to turn · right-drag to pan · ⤢ for full screen · click a bolt");
+  v.hint.textContent = on ? (COARSE ? "Drag to turn · pinch to zoom · two fingers to pan · tap a part" : "Drag to turn · scroll to zoom · right-drag to pan · click a part")
+                          : (COARSE ? "Tap to open in 3D · tap an orange tag for its torque" : "Drag to turn · right-drag to pan · ⤢ for full screen · click a part");
   resize(v);
 }
 

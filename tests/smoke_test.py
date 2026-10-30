@@ -178,4 +178,25 @@ for page in ["/vehicle/1", "/vehicle/1/sessions", "/vehicle/1/sessions/new",
              "/jobs", "/vehicle/1/jobs", "/runs/1", "/wiring"]:
     assert c.get(page).status_code == 200, page
 print("all pages render OK")
+
+# hardware docs shipped in hwdocs/: every page and every file the manifest names
+from app import hw_manifest  # noqa: E402
+man = hw_manifest()
+assert man and len(man["boards"]) == 4, "hwdocs manifest missing"
+assert b"three" in ok(c.get("/hw/guide")).data
+pages = ["/hw", "/hw/factory", "/hw/view/harness.svg"]
+for b in man["boards"]:
+    pages += [f"/hw/board/{b['key']}"] + ([f"/hw/cables/{b['key']}"] if b["cables"] else [])
+    files = [b["render"], b["sch_pdf"], b["pcb_pdf"]] + [s["file"] for s in b["sheets"]]
+    pages += [f"/hw/view/{s['file']}" for s in b["sheets"]]
+    for f in files:
+        assert c.get(f"/hw/f/{f}").status_code == 200, f
+for f in man["factory_figs"] + man["factory_pdfs"]:
+    assert c.get(f"/hw/f/{f['file']}").status_code == 200, f["file"]
+for page in pages:
+    assert c.get(page).status_code == 200, page
+assert c.get("/hw/f/../app.py").status_code == 404
+assert c.get("/hw/board/nope").status_code == 404
+assert "CAN_H" in c.get("/hw/cables/main").get_data(as_text=True)
+print("hardware docs OK")
 print("SMOKE TEST PASS")

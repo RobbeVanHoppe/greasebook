@@ -28,7 +28,7 @@ id -u "$SVC_USER" >/dev/null 2>&1 || \
 
 echo ">> Copying app to $APP_DIR"
 mkdir -p "$APP_DIR"
-cp -r app.py templates static requirements.txt "$APP_DIR/"
+cp -r app.py templates static hwdocs requirements.txt "$APP_DIR/"
 
 echo ">> Building virtualenv"
 python3 -m venv "$APP_DIR/venv"

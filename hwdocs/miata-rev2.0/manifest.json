@@ -1,0 +1,643 @@
+{
+ "release": "rev2.0",
+ "title": "Miata NA 1989 EU in-car electronics",
+ "arch": "architecture rev 4.3 (D48)",
+ "date": "2026-10-29",
+ "boards": [
+  {
+   "key": "power-module",
+   "title": "Power module (x2)",
+   "guide_tab": "power",
+   "sheets": [
+    {
+     "name": "3V3 buck",
+     "file": "power-module/sch-3v3-buck.svg"
+    },
+    {
+     "name": "5V buck",
+     "file": "power-module/sch-5v-buck.svg"
+    },
+    {
+     "name": "Input and outputs",
+     "file": "power-module/sch-input-and-outputs.svg"
+    },
+    {
+     "name": "Root sheet",
+     "file": "power-module/sch-root-sheet.svg"
+    }
+   ],
+   "render": "power-module/3d.png",
+   "pcb_pdf": "power-module/power-module-pcb.pdf",
+   "sch_pdf": "power-module/power-module-schematic.pdf",
+   "cables": [],
+   "related": []
+  },
+  {
+   "key": "dash",
+   "title": "Dash PCB",
+   "guide_tab": "dash",
+   "sheets": [
+    {
+     "name": "Dash node",
+     "file": "dash/sch-dash-node.svg"
+    },
+    {
+     "name": "Root sheet",
+     "file": "dash/sch-root-sheet.svg"
+    }
+   ],
+   "render": "dash/3d.png",
+   "pcb_pdf": "dash/dash-pcb.pdf",
+   "sch_pdf": "dash/dash-schematic.pdf",
+   "cables": [
+    {
+     "Connector": "J20",
+     "Part": "from power module J5",
+     "Pins (pin: net)": "1: 3V3, 2: GND, 3: EN_5V, 4: EN_A, 5: 12V_SENSE, 6: GND",
+     "Goes to": "Power module #1 J5",
+     "Wire": "6 x 0.25 mm2, Dupont 1x6 both ends, pin 1 to pin 1",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: 3V3",
+      "2: GND",
+      "3: EN_5V",
+      "4: EN_A",
+      "5: 12V_SENSE",
+      "6: GND"
+     ]
+    },
+    {
+     "Connector": "J29",
+     "Part": "Main feed in (module J3)",
+     "Pins (pin: net)": "1: 12V_FEED, 2: GND",
+     "Goes to": "Power module #1 J3 (main feed)",
+     "Wire": "2 x 0.5 mm2 (red / black)",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: 12V_FEED",
+      "2: GND"
+     ]
+    },
+    {
+     "Connector": "J12",
+     "Part": "RJ45 to main",
+     "Pins (pin: net)": "1: CAN_H, 2: CAN_L, 3: GND, 4: 12V_FEED, 5: 12V_FEED, 6: NC, 7: GND, 8: GND",
+     "Goes to": "Main node J35",
+     "Wire": "Cat6 S/FTP patch cable, straight-through, shield bonded at the dash only",
+     "Length": "~1.0 m",
+     "pins": [
+      "1: CAN_H",
+      "2: CAN_L",
+      "3: GND",
+      "4: 12V_FEED",
+      "5: 12V_FEED",
+      "6: NC",
+      "7: GND",
+      "8: GND"
+     ]
+    },
+    {
+     "Connector": "J21",
+     "Part": "ME221 CAN",
+     "Pins (pin: net)": "1: CAN_H, 2: CAN_L, 3: GND",
+     "Goes to": "ME221 ECU: pin 21 CAN-H, pin 51 CAN-L",
+     "Wire": "shielded twisted pair 2 x 0.25-0.5 mm2; shield to J21.3 (GND) at the dash only",
+     "Length": "~1.5 m",
+     "pins": [
+      "1: CAN_H",
+      "2: CAN_L",
+      "3: GND"
+     ]
+    },
+    {
+     "Connector": "J22",
+     "Part": "Pi HAT CAN stub",
+     "Pins (pin: net)": "1: CAN_H, 2: CAN_L, 3: GND",
+     "Goes to": "Pi CAN HAT (MCP2518FD) CAN-H / CAN-L / GND, HAT termination OFF",
+     "Wire": "3 x 0.25 mm2 twisted, JST XHP-3",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: CAN_H",
+      "2: CAN_L",
+      "3: GND"
+     ]
+    },
+    {
+     "Connector": "J23",
+     "Part": "Pi handshake",
+     "Pins (pin: net)": "1: SHUTDOWN_REQ, 2: POWEROFF_DONE_IN, 3: PI_ALIVE_IN, 4: GND",
+     "Goes to": "Pi carrier J41",
+     "Wire": "4 x 0.25 mm2, JST XHP-4 both ends, pin 1 to pin 1",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: SHUTDOWN_REQ",
+      "2: POWEROFF_DONE_IN",
+      "3: PI_ALIVE_IN",
+      "4: GND"
+     ]
+    },
+    {
+     "Connector": "J24",
+     "Part": "AS5600 (7-pin cable)",
+     "Pins (pin: net)": "1: 3V3_SW, 2: SDA, 3: SCL, 4: GND",
+     "Goes to": "AS5600 encoder: VCC, SDA, SCL, GND; tie AS5600 DIR to GND at the sensor",
+     "Wire": "4 x 0.25 mm2, XHP-4 to Dupont",
+     "Length": "<= 0.2 m (I2C, on the knob)",
+     "pins": [
+      "1: 3V3_SW",
+      "2: SDA",
+      "3: SCL",
+      "4: GND"
+     ]
+    },
+    {
+     "Connector": "J25",
+     "Part": "Knob push switch",
+     "Pins (pin: net)": "1: KNOB_SW_IN, 2: GND",
+     "Goes to": "Knob push switch",
+     "Wire": "2 x 0.25 mm2, XHP-2",
+     "Length": "<= 0.2 m",
+     "pins": [
+      "1: KNOB_SW_IN",
+      "2: GND"
+     ]
+    },
+    {
+     "Connector": "J19",
+     "Part": "SimpleFOC Mini logic",
+     "Pins (pin: net)": "1: FOC_IN1, 2: FOC_IN2, 3: FOC_IN3, 4: FOC_EN, 5: GND",
+     "Goes to": "SimpleFOC Mini logic header: IN1, IN2, IN3, EN, GND (match the module silkscreen, review O5)",
+     "Wire": "5 x 0.25 mm2, XHP-5 to Dupont",
+     "Length": "<= 0.2 m",
+     "pins": [
+      "1: FOC_IN1",
+      "2: FOC_IN2",
+      "3: FOC_IN3",
+      "4: FOC_EN",
+      "5: GND"
+     ]
+    },
+    {
+     "Connector": "J26",
+     "Part": "IGN / ACC",
+     "Pins (pin: net)": "1: IGN_IN, 2: ACC_IN",
+     "Goes to": "Ignition switch taps: IGN = IG1 (BLK/YEL), ACC (BLU/BLK); 1 A inline fuse at each tap",
+     "Wire": "2 x 0.5 mm2",
+     "Length": "~1.0 m [E]",
+     "pins": [
+      "1: IGN_IN",
+      "2: ACC_IN"
+     ]
+    }
+   ],
+   "related": [
+    "Power module #1 J2 -> SimpleFOC Mini VM / GND (knob motor supply, not via the dash PCB): 2 x 0.5 mm2, <= 0.2 m",
+    "SimpleFOC Mini motor phases -> 2204 gimbal motor: motor leads, as supplied",
+    "Power module #1 J4 -> Pi carrier J40 (5 V): 2 x 0.75 mm2, JST VHR-2N at the module, <= 0.3 m",
+    "Battery + -> power module #1 J1 (+); 7.5 A fuse at the battery: 1.5 mm2, ~3.5 m",
+    "Power module #1 J1 (-) -> chassis star point: 1.5 mm2, short"
+   ]
+  },
+  {
+   "key": "main",
+   "title": "Main PCB",
+   "guide_tab": "main",
+   "sheets": [
+    {
+     "name": "Main node",
+     "file": "main/sch-main-node.svg"
+    },
+    {
+     "name": "Root sheet",
+     "file": "main/sch-root-sheet.svg"
+    }
+   ],
+   "render": "main/3d.png",
+   "pcb_pdf": "main/main-pcb.pdf",
+   "sch_pdf": "main/main-schematic.pdf",
+   "cables": [
+    {
+     "Connector": "J35",
+     "Part": "RJ45 from dash",
+     "Pins (pin: net)": "1: CAN_H, 2: CAN_L, 3: GND, 4: 12V_IN_M, 5: 12V_IN_M, 6: NC, 7: GND, 8: GND",
+     "Goes to": "Dash node J12",
+     "Wire": "Cat6 S/FTP straight-through (shield open at this end)",
+     "Length": "~1.0 m",
+     "pins": [
+      "1: CAN_H",
+      "2: CAN_L",
+      "3: GND",
+      "4: 12V_IN_M",
+      "5: 12V_IN_M",
+      "6: NC",
+      "7: GND",
+      "8: GND"
+     ]
+    },
+    {
+     "Connector": "J39",
+     "Part": "to power module #2 J1",
+     "Pins (pin: net)": "1: 12V_IN_M, 2: GND",
+     "Goes to": "Power module #2 J1 (12 V in)",
+     "Wire": "2 x 0.5 mm2 (red / black)",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: 12V_IN_M",
+      "2: GND"
+     ]
+    },
+    {
+     "Connector": "J30",
+     "Part": "from power module #2 J5",
+     "Pins (pin: net)": "1: 3V3, 2: GND, 3: NC, 4: NC, 5: 12V_SENSE, 6: GND",
+     "Goes to": "Power module #2 J5",
+     "Wire": "6 x 0.25 mm2, Dupont 1x6 both ends, pin 1 to pin 1",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: 3V3",
+      "2: GND",
+      "3: NC",
+      "4: NC",
+      "5: 12V_SENSE",
+      "6: GND"
+     ]
+    },
+    {
+     "Connector": "J32",
+     "Part": "COIL+ in (module J3)",
+     "Pins (pin: net)": "1: COIL+, 2: GND",
+     "Goes to": "Power module #2 J3 (COIL+; RT2 = wire bridge on that module)",
+     "Wire": "2 x 0.5 mm2",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: COIL+",
+      "2: GND"
+     ]
+    },
+    {
+     "Connector": "J31",
+     "Part": "IG1 / HEAD / REV / GND",
+     "Pins (pin: net)": "1: IG1_IN, 2: HEAD_IN, 3: REV_IN, 4: GND",
+     "Goes to": "IG1 tap (1 A fuse), HEAD line (stalk), reverse switch, GND",
+     "Wire": "4 x 0.5 mm2",
+     "Length": "~1.5 m [E]",
+     "pins": [
+      "1: IG1_IN",
+      "2: HEAD_IN",
+      "3: REV_IN",
+      "4: GND"
+     ]
+    },
+    {
+     "Connector": "J34",
+     "Part": "Relay harness",
+     "Pins (pin: net)": "1: COIL+, 2: RLY1_COIL, 3: RLY2_COIL, 4: RLY3_COIL, 5: RLY4_COIL, 6: NC",
+     "Goes to": "Relay box: COIL+, RLY1 SET coil, RLY2, RLY3, RLY4 coil (-); 1 A fuse per coil feed in the box",
+     "Wire": "5 x 0.5 mm2",
+     "Length": "~1.0 m [E]",
+     "pins": [
+      "1: COIL+",
+      "2: RLY1_COIL",
+      "3: RLY2_COIL",
+      "4: RLY3_COIL",
+      "5: RLY4_COIL",
+      "6: NC"
+     ]
+    },
+    {
+     "Connector": "J37",
+     "Part": "spare GPIO",
+     "Pins (pin: net)": "1: SPARE33, 2: SPARE18, 3: SPARE4, 4: GND",
+     "Goes to": "Spare GPIO33 / 18 / 4 + GND (not wired)",
+     "Wire": "-",
+     "Length": "-",
+     "pins": [
+      "1: SPARE33",
+      "2: SPARE18",
+      "3: SPARE4",
+      "4: GND"
+     ]
+    }
+   ],
+   "related": [
+    "IG1 -> relay box RLY1 RESET coil: 0.5 mm2, [E]"
+   ]
+  },
+  {
+   "key": "pi-carrier",
+   "title": "Pi carrier",
+   "guide_tab": "pi",
+   "sheets": [
+    {
+     "name": "Pi carrier",
+     "file": "pi-carrier/sch-pi-carrier.svg"
+    },
+    {
+     "name": "Root sheet",
+     "file": "pi-carrier/sch-root-sheet.svg"
+    }
+   ],
+   "render": "pi-carrier/3d.png",
+   "pcb_pdf": "pi-carrier/pi-carrier-pcb.pdf",
+   "sch_pdf": "pi-carrier/pi-carrier-schematic.pdf",
+   "cables": [
+    {
+     "Connector": "J40",
+     "Part": "Pi 5V in",
+     "Pins (pin: net)": "1: 5V, 2: GND",
+     "Goes to": "Power module #1 J4 (5 V)",
+     "Wire": "2 x 0.75 mm2, VHR-2N at the module",
+     "Length": "<= 0.3 m",
+     "pins": [
+      "1: 5V",
+      "2: GND"
+     ]
+    },
+    {
+     "Connector": "J41",
+     "Part": "Handshake to dash J23",
+     "Pins (pin: net)": "1: SHUTDOWN_REQ, 2: POWEROFF_DONE, 3: PI_ALIVE, 4: GND",
+     "Goes to": "Dash node J23",
+     "Wire": "4 x 0.25 mm2, XHP-4 both ends, pin 1 to pin 1",
+     "Length": "<= 0.3 m [E]",
+     "pins": [
+      "1: SHUTDOWN_REQ",
+      "2: POWEROFF_DONE",
+      "3: PI_ALIVE",
+      "4: GND"
+     ]
+    },
+    {
+     "Connector": "J42",
+     "Part": "Pi 2x20 stacking",
+     "Pins (pin: net)": "-",
+     "Goes to": "Pi 3B GPIO header (plug-in) + MCP2518FD HAT on top",
+     "Wire": "-",
+     "Length": "-",
+     "pins": [
+      "-"
+     ]
+    }
+   ],
+   "related": []
+  }
+ ],
+ "factory_pdfs": [
+  {
+   "title": "How to use system wiring diagrams (Mitchell, 1990 USA, 9 p.)",
+   "file": "factory/miata90-WD-0.pdf"
+  },
+  {
+   "title": "Wiring diagrams (Mitchell, 1990 USA, 7 p.)",
+   "file": "factory/miata90-WD-1.pdf"
+  },
+  {
+   "title": "System wiring diagrams (Mitchell, 1990 USA, 8 p.)",
+   "file": "factory/miata90-WD-2.pdf"
+  }
+ ],
+ "factory_figs": [
+  {
+   "id": "A",
+   "title": "Starting system · charging system",
+   "z": [
+    "Z-26",
+    "Z-27"
+   ],
+   "file": "factory/fig/A.svg"
+  },
+  {
+   "id": "B-1a",
+   "title": "Engine control system · ignition system",
+   "z": [
+    "Z-28",
+    "Z-29"
+   ],
+   "file": "factory/fig/B-1a.svg"
+  },
+  {
+   "id": "B-1b",
+   "title": "Engine control system (sensors)",
+   "z": [
+    "Z-30",
+    "Z-31"
+   ],
+   "file": "factory/fig/B-1b.svg"
+  },
+  {
+   "id": "B-1c",
+   "title": "Engine control system (diagnosis, switches, links)",
+   "z": [
+    "Z-32",
+    "Z-33"
+   ],
+   "file": "factory/fig/B-1c.svg"
+  },
+  {
+   "id": "B-2",
+   "title": "Fuel control system",
+   "z": [
+    "Z-36",
+    "Z-37"
+   ],
+   "file": "factory/fig/B-2.svg"
+  },
+  {
+   "id": "B-3",
+   "title": "Cooling fan system",
+   "z": [
+    "Z-38",
+    "Z-39"
+   ],
+   "file": "factory/fig/B-3.svg"
+  },
+  {
+   "id": "C",
+   "title": "Instrument clusters",
+   "z": [
+    "Z-40",
+    "Z-41"
+   ],
+   "file": "factory/fig/C.svg"
+  },
+  {
+   "id": "D-1",
+   "title": "Windshield wiper & washer (Federal & California)",
+   "z": [
+    "Z-42",
+    "Z-43"
+   ],
+   "file": "factory/fig/D-1.svg"
+  },
+  {
+   "id": "D-2",
+   "title": "Windshield wiper & washer (Canada)",
+   "z": [
+    "Z-44",
+    "Z-45"
+   ],
+   "file": "factory/fig/D-2.svg"
+  },
+  {
+   "id": "E-1",
+   "title": "Headlights · front fog lights (option) · headlight retractor motor (Federal & California)",
+   "z": [
+    "Z-46",
+    "Z-47"
+   ],
+   "file": "factory/fig/E-1.svg"
+  },
+  {
+   "id": "E-2",
+   "title": "Headlights · front fog lights (option) · headlight retractor motor (Canada)",
+   "z": [
+    "Z-48",
+    "Z-49"
+   ],
+   "file": "factory/fig/E-2.svg"
+  },
+  {
+   "id": "E-3",
+   "title": "Daytime running light control system (Canada)",
+   "z": [
+    "Z-50",
+    "Z-51"
+   ],
+   "file": "factory/fig/E-3.svg"
+  },
+  {
+   "id": "E-4",
+   "title": "Front parking · license plate · taillights · front and rear side marker lights",
+   "z": [
+    "Z-52",
+    "Z-53"
+   ],
+   "file": "factory/fig/E-4.svg"
+  },
+  {
+   "id": "E-5",
+   "title": "Illumination lamps",
+   "z": [
+    "Z-54",
+    "Z-55"
+   ],
+   "file": "factory/fig/E-5.svg"
+  },
+  {
+   "id": "F-1",
+   "title": "Turn signal & hazard flasher · stoplights · back-up lights · horn · high-mount stoplight (Federal & California)",
+   "z": [
+    "Z-56",
+    "Z-57"
+   ],
+   "file": "factory/fig/F-1.svg"
+  },
+  {
+   "id": "F-2",
+   "title": "Turn signal & hazard flasher · stoplights · back-up lights · horn · high-mount stoplight (Canada)",
+   "z": [
+    "Z-58",
+    "Z-59"
+   ],
+   "file": "factory/fig/F-2.svg"
+  },
+  {
+   "id": "G",
+   "title": "Heater & air conditioner",
+   "z": [
+    "Z-60",
+    "Z-61"
+   ],
+   "file": "factory/fig/G.svg"
+  },
+  {
+   "id": "H-1",
+   "title": "A/T control system",
+   "z": [
+    "Z-62",
+    "Z-63"
+   ],
+   "file": "factory/fig/H-1.svg"
+  },
+  {
+   "id": "H-2",
+   "title": "Shiftlock system (A/T)",
+   "z": [
+    "Z-66",
+    "Z-67"
+   ],
+   "file": "factory/fig/H-2.svg"
+  },
+  {
+   "id": "I",
+   "title": "Cigar lighter · interior lamps",
+   "z": [
+    "Z-68",
+    "Z-69"
+   ],
+   "file": "factory/fig/I.svg"
+  },
+  {
+   "id": "J-1",
+   "title": "Audio system (type 1, 2)",
+   "z": [
+    "Z-70",
+    "Z-71"
+   ],
+   "file": "factory/fig/J-1.svg"
+  },
+  {
+   "id": "K",
+   "title": "Power window",
+   "z": [
+    "Z-74",
+    "Z-75"
+   ],
+   "file": "factory/fig/K.svg"
+  },
+  {
+   "id": "O",
+   "title": "ABS (anti-lock brake system)",
+   "z": [
+    "Z-76",
+    "Z-77"
+   ],
+   "file": "factory/fig/O.svg"
+  },
+  {
+   "id": "Q",
+   "title": "Cruise control system (Federal & California)",
+   "z": [
+    "Z-78",
+    "Z-79"
+   ],
+   "file": "factory/fig/Q.svg"
+  },
+  {
+   "id": "S",
+   "title": "Air bag control system (Federal & California)",
+   "z": [
+    "Z-82",
+    "Z-83"
+   ],
+   "file": "factory/fig/S.svg"
+  },
+  {
+   "id": "T",
+   "title": "CPU: sound warning unit",
+   "z": [
+    "Z-84",
+    "Z-85"
+   ],
+   "file": "factory/fig/T.svg"
+  }
+ ],
+ "factory_source": {
+  "title": "Mazda MX-5 workshop manual",
+  "code": "1193-10-89C",
+  "section": "Z (wiring diagram)",
+  "edition": "North America: Federal & California, Canada",
+  "pages": "Z-18 … Z-89 (PDF pages 829–894)",
+  "copy": "Owner's PDF, GitHub release manual-1990"
+ }
+}

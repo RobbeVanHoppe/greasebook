@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ b.title }} cables — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ b.title }} · cables</h1>
+    <div class="plate-sub"><a href="{{ url_for('hw_index') }}">Hardware</a> ·
+      <a href="{{ url_for('hw_board_page', key=b.key) }}">{{ b.title }}</a> · off-board cables</div></div>
+</header>
+<p class="hint">Pin → net from the PCB. <em>[E]</em> = estimate, cut to suit the car.</p>
+{% for c in b.cables %}
+<section class="panel hw-cable">
+  <div class="hw-cable-head"><span class="mono strong">{{ c['Connector'] }}</span><span>{{ c['Part'] }}</span></div>
+  <dl class="hw-dl">
+    <dt>Goes to</dt><dd>{{ c['Goes to'] }}</dd>
+    <dt>Wire</dt><dd>{{ c['Wire'] }}</dd>
+    <dt>Length</dt><dd class="mono">{{ c['Length'] }}</dd>
+  </dl>
+  <ul class="hw-pins">
+    {% for p in c.pins %}{% set n, net = p.split(': ', 1) if ': ' in p else (p, '') %}
+    <li class="{% if net == 'NC' %}dim{% endif %}"><span class="mono dim">{{ n }}</span><span class="mono">{{ net }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% if b.related %}
+<h2 class="wd-h">Related cables (not on this PCB)</h2>
+<section class="panel"><ul class="hw-related">{% for r in b.related %}<li>{{ r }}</li>{% endfor %}</ul></section>
+{% endif %}
+{% endblock %}

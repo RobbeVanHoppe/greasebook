@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Hardware — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Hardware</h1>
+    <div class="plate-sub">{% if man %}{{ man.title }} · release {{ man.release }} · {{ man.arch }}{% else %}in-car electronics{% endif %}</div></div>
+</header>
+{% if not man %}
+<section class="panel"><div class="empty">No hardware docs in this build (hwdocs/ is missing).</div></section>
+{% else %}
+<section class="panel">
+  <div class="wd-list">
+    <a class="wd-row master" href="{{ url_for('hw_guide') }}"><span class="mono dim">3D</span><span>Assembly guide — step by step, 3D view per step, all 4 boards</span></a>
+    <a class="wd-row" href="{{ url_for('hw_view', f='harness.svg') }}"><span class="mono dim">WD</span><span>Car harness — who connects to whom</span></a>
+    <a class="wd-row" href="{{ url_for('hw_factory') }}"><span class="mono dim">Z</span><span>Factory wiring diagrams (1990 USA)</span></a>
+  </div>
+</section>
+
+<h2 class="wd-h">Boards</h2>
+<div class="hw-boards">
+  {% for b in man.boards %}
+  <section class="panel hw-board">
+    <a href="{{ url_for('hw_board_page', key=b.key) }}" class="hw-thumb">
+      <img src="{{ url_for('hw_file', f=b.render) }}" alt="3D render of the {{ b.title }}" loading="lazy"></a>
+    <div class="strong">{{ b.title }}</div>
+    <div class="btn-row">
+      <a class="btn mini" href="{{ url_for('hw_guide') }}#{{ b.guide_tab }}">Guide</a>
+      <a class="btn mini" href="{{ url_for('hw_board_page', key=b.key) }}">Schematic &amp; PCB</a>
+      {% if b.cables %}<a class="btn mini" href="{{ url_for('hw_cables', key=b.key) }}">Cables</a>{% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<p class="hint">Source: <span class="mono">RobbeVanHoppe/miata-hw</span>, release {{ man.release }} ({{ man.date }}).
+  Rebuilt with <span class="mono">scripts/greasebook/export.py</span>.</p>
+{% endif %}
+{% endblock %}

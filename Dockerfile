@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY templates templates
 COPY static static
+COPY hwdocs hwdocs
 
 # database + attachments live here -- mount a volume
 ENV GREASEBOOK_DATA=/data

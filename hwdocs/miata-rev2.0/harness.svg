@@ -1,0 +1,54 @@
+<svg viewBox="0 0 1180 620" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Arial, sans-serif" font-size="13">
+<defs><marker id="dot" markerWidth="6" markerHeight="6" refX="3" refY="3"><circle cx="3" cy="3" r="2.5" fill="#333"/></marker></defs>
+<rect width="1180" height="620" fill="#fff"/>
+<text x="20" y="30" font-size="20" font-weight="600" fill="#17202a">Car harness - who connects to whom</text>
+<text x="20" y="50" fill="#5b6875">Wire sizes in mm2; lengths are estimates [E]. Colours: red 12 V battery, purple protected 12 V, black ground, yellow/green CAN, brown car signals, blue logic.</text>
+<g stroke="#333" stroke-width="1.2">
+<rect x="20" y="80" width="170" height="70" rx="8" fill="#f6f6f6"/><rect x="20" y="190" width="170" height="60" rx="8" fill="#f6f6f6"/>
+<rect x="20" y="290" width="170" height="110" rx="8" fill="#f6f6f6"/><rect x="20" y="440" width="170" height="60" rx="8" fill="#f6f6f6"/>
+<rect x="300" y="80" width="560" height="330" rx="10" fill="#fdf6ec" stroke-dasharray="6 4"/>
+<rect x="320" y="110" width="150" height="120" rx="6" fill="#e7f0e1"/><rect x="510" y="110" width="160" height="150" rx="6" fill="#ece3d0"/>
+<rect x="700" y="110" width="140" height="110" rx="6" fill="#e3e9f3"/><rect x="700" y="250" width="140" height="60" rx="6" fill="#e3e9f3"/>
+<rect x="510" y="300" width="160" height="80" rx="6" fill="#f1e6f3"/><rect x="320" y="270" width="150" height="60" rx="6" fill="#f6f6f6"/>
+<rect x="930" y="80" width="230" height="330" rx="10" fill="#eef3f8" stroke-dasharray="6 4"/>
+<rect x="950" y="110" width="190" height="90" rx="6" fill="#e7f0e1"/><rect x="950" y="230" width="190" height="90" rx="6" fill="#ece3d0"/>
+<rect x="950" y="440" width="190" height="110" rx="6" fill="#f6f6f6"/><rect x="300" y="460" width="160" height="70" rx="8" fill="#f6f6f6"/>
+</g>
+<g fill="#17202a" font-weight="600">
+<text x="30" y="104">Battery +</text><text x="30" y="214">Chassis ground</text><text x="30" y="314">Ignition switch taps</text>
+<text x="30" y="464">ME221 ECU</text><text x="310" y="100">2DIN opening (tombstone)</text><text x="330" y="130">Power module #1</text>
+<text x="520" y="130">Dash PCB</text><text x="710" y="130">Pi 3B + carrier</text><text x="710" y="270">LCD 1024x600</text>
+<text x="520" y="320">Haptic knob</text><text x="330" y="290">Chassis star</text><text x="940" y="100">Driver-side under-dash</text>
+<text x="960" y="130">Power module #2</text><text x="960" y="250">Main PCB</text><text x="960" y="464">Relay box</text>
+<text x="310" y="484">Stalk / reverse switch</text></g>
+<g fill="#5b6875" font-size="12">
+<text x="30" y="122">permanent 12 V, 7.5 A fuse</text><text x="30" y="138">at the source</text>
+<text x="30" y="334">IG1 (BLK/YEL) RUN+START</text><text x="30" y="352">ACC (BLU/BLK) drops in START</text><text x="30" y="370">1 A inline fuse at each tap</text>
+<text x="30" y="484">pin 21 CAN-H, pin 51 CAN-L</text>
+<text x="330" y="148">J1 in, J2 knob, J3 main</text><text x="330" y="164">J4 Pi 5 V, J5 logic</text><text x="330" y="180">fuse 5 A</text>
+<text x="520" y="148">ESP32: supervisor + knob</text><text x="520" y="164">CAN junction (no 120 ohm)</text><text x="520" y="180">RJ45 to main</text>
+<text x="710" y="148">carrier: 5 V + handshake</text><text x="710" y="164">MCP2518FD HAT, term. OFF</text>
+<text x="520" y="338">SimpleFOC Mini + 2204</text><text x="520" y="354">AS5600, push switch</text>
+<text x="960" y="148">fuse 2 A, RT2 = bridge</text><text x="960" y="164">J3 = relay coil feed</text>
+<text x="960" y="268">ESP32: relays, inputs</text><text x="960" y="284">GPS + IMU -> CAN</text><text x="960" y="300">CAN 120 ohm (end 2)</text>
+<text x="960" y="482">RLY1 latching (HEAD)</text><text x="960" y="498">RLY2-4 ISO mini changeover</text><text x="960" y="514">1 A fuse per coil feed</text>
+<text x="310" y="502">HEAD line, reverse switch</text></g>
+<g fill="none" stroke-width="3">
+<path d="M190 115 H260 V150 H320" stroke="#d32f2f"/><path d="M190 220 H250 V300 H320" stroke="#222"/>
+<path d="M395 270 V230" stroke="#222"/>
+<path d="M470 140 H510" stroke="#1e88e5"/><path d="M470 160 H490 V350 H510" stroke="#8e24aa"/>
+<path d="M470 200 H485 V60 H900 V150 H950" stroke="#8e24aa"/><path d="M470 120 H480 V70 H700 V140" stroke="#c62828"/>
+<path d="M670 160 H700" stroke="#1e88e5"/><path d="M670 190 H700" stroke="#f9c80e"/><path d="M670 320 H690 V300" stroke="#1e88e5"/>
+<path d="M770 220 V250" stroke="#1e88e5"/>
+<path d="M670 240 H900 V270 H950" stroke="#f9c80e"/><path d="M190 470 H230 V420 H560 V260" stroke="#2e7d32"/>
+<path d="M190 330 H280 V240 H540 V260" stroke="#8d6e63"/><path d="M190 350 H290 V560 H900 V300 H950" stroke="#8d6e63"/>
+<path d="M460 495 H880 V290 H950" stroke="#8d6e63"/><path d="M1045 320 V440" stroke="#ec407a"/>
+<path d="M1045 200 V230" stroke="#1e88e5"/></g>
+<g font-size="11.5" fill="#17202a">
+<text x="200" y="110">1.5 mm2, ~3.5 m</text><text x="200" y="244">1.5 mm2</text><text x="482" y="134">J5 -> J20 (6 x 0.25)</text>
+<text x="494" y="230" transform="rotate(-90 494 230)">J2 -> VM 0.5</text><text x="600" y="54">Cat6 S/FTP ~1.0 m: 1/2 CAN, 3 GND, 4/5 +12 V, 7/8 GND</text>
+<text x="540" y="84">J4 -> carrier, 0.75 mm2 &lt;= 0.3 m</text><text x="676" y="156">J23 handshake</text><text x="676" y="186">J22 CAN stub</text>
+<text x="780" y="240">HDMI + 1 USB</text><text x="236" y="410">STP ~1.5 m, shield to dash GND</text>
+<text x="300" y="586">IG1 to main J31.1, to RLY1 RESET coil</text><text x="600" y="490">HEAD -> J31.2, REV -> J31.3</text>
+<text x="1052" y="390">J34: COIL+, RLY1 SET, RLY2-4</text><text x="1052" y="220">J5 -> J30</text></g>
+</svg>

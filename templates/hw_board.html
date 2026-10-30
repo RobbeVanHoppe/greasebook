@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ b.title }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ b.title }}</h1>
+    <div class="plate-sub"><a href="{{ url_for('hw_index') }}">Hardware</a> · release {{ man.release }}</div></div>
+</header>
+<section class="panel">
+  <img class="hw-render" src="{{ url_for('hw_file', f=b.render) }}" alt="3D render of the {{ b.title }}">
+  <div class="btn-row">
+    <a class="btn prime" href="{{ url_for('hw_guide') }}#{{ b.guide_tab }}">Assembly guide (3D)</a>
+    {% if b.cables %}<a class="btn" href="{{ url_for('hw_cables', key=b.key) }}">Cable list</a>{% endif %}
+  </div>
+</section>
+<h2 class="wd-h">Schematic sheets</h2>
+<section class="panel"><div class="wd-list">
+  {% for s in b.sheets %}
+  <a class="wd-row" href="{{ url_for('hw_view', f=s.file) }}"><span class="mono dim">SVG</span><span>{{ s.name }}</span></a>
+  {% endfor %}
+</div></section>
+<h2 class="wd-h">PDF</h2>
+<section class="panel"><div class="wd-list">
+  <a class="wd-row" href="{{ url_for('hw_file', f=b.sch_pdf) }}"><span class="mono dim">PDF</span><span>Schematic (all sheets)</span></a>
+  <a class="wd-row" href="{{ url_for('hw_file', f=b.pcb_pdf) }}"><span class="mono dim">PDF</span><span>PCB layers: copper, silkscreen, outline</span></a>
+</div></section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Factory wiring — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>Factory wiring</h1>
+    <div class="plate-sub"><a href="{{ url_for('hw_index') }}">Hardware</a> · 1990 USA diagrams — verify on the 1989 EU car</div></div>
+</header>
+<h2 class="wd-h">System diagrams (redrawn)</h2>
+<section class="panel"><div class="wd-list">
+  {% for f in man.factory_figs %}
+  <a class="wd-row" href="{{ url_for('hw_view', f=f.file) }}"><span class="mono dim">{{ f.id }}</span><span>{{ f.title }}</span>
+    {% if f.z %}<span class="tag">{{ f.z|join(' ') }}</span>{% endif %}</a>
+  {% endfor %}
+</div></section>
+{% if man.factory_source %}<p class="hint">Redrawn from {{ man.factory_source.title }} {{ man.factory_source.code }},
+  section {{ man.factory_source.section }}, {{ man.factory_source.edition }}.</p>{% endif %}
+<h2 class="wd-h">Original PDFs</h2>
+<section class="panel"><div class="wd-list">
+  {% for p in man.factory_pdfs %}
+  <a class="wd-row" href="{{ url_for('hw_file', f=p.file) }}"><span class="mono dim">PDF</span><span>{{ p.title }}</span></a>
+  {% endfor %}
+</div></section>
+{% endblock %}

@@ -1782,6 +1782,85 @@ def wiring_unit(sid, uid):
                            home=W.sys.get(u["system"]))
 
 
+# ---------------------------------------------------------------- hardware docs
+# Read-only hardware documentation shipped with the app in hwdocs/<set>/ (not in
+# the database): manifest.json plus the files it names, written by miata-hw
+# scripts/greasebook/export.py. The assembly guide is a self-contained page
+# (3D views per step); everything else is rendered with the normal templates.
+
+HW_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hwdocs")
+HW_SET = "miata-rev2.0"
+_hw_cache = {}
+
+
+def hw_manifest():
+    path = os.path.join(HW_DIR, HW_SET, "manifest.json")
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return None
+    if _hw_cache.get("mtime") != mtime:
+        with open(path, encoding="utf-8") as f:
+            _hw_cache.update(mtime=mtime, man=json.load(f))
+    return _hw_cache["man"]
+
+
+def hw_board(key):
+    man = hw_manifest() or abort(404)
+    return man, next((b for b in man["boards"] if b["key"] == key), None) or abort(404)
+
+
+@app.route("/hw")
+def hw_index():
+    return render_template("hw_index.html", man=hw_manifest())
+
+
+@app.route("/hw/guide")
+def hw_guide():
+    hw_manifest() or abort(404)
+    return send_from_directory(os.path.join(HW_DIR, HW_SET), "guide.html")
+
+
+@app.route("/hw/board/<key>")
+def hw_board_page(key):
+    man, b = hw_board(key)
+    return render_template("hw_board.html", man=man, b=b)
+
+
+@app.route("/hw/cables/<key>")
+def hw_cables(key):
+    man, b = hw_board(key)
+    return render_template("hw_cables.html", man=man, b=b)
+
+
+@app.route("/hw/factory")
+def hw_factory():
+    return render_template("hw_factory.html", man=hw_manifest() or abort(404))
+
+
+@app.route("/hw/view/<path:f>")
+def hw_view(f):
+    """One drawing (SVG) full width with Fit / 2x / 4x zoom; title from the manifest."""
+    man = hw_manifest() or abort(404)
+    if not f.endswith(".svg") or not os.path.isfile(os.path.join(HW_DIR, HW_SET, f)):
+        abort(404)
+    title, back = "Car harness", ("Hardware", url_for("hw_index"))
+    for b in man["boards"]:
+        for s in b["sheets"]:
+            if s["file"] == f:
+                title, back = f"{b['title']} · {s['name']}", (b["title"], url_for("hw_board_page", key=b["key"]))
+    for fig in man["factory_figs"]:
+        if fig["file"] == f:
+            title, back = f"{fig['id']} · {fig['title']}", ("Factory wiring", url_for("hw_factory"))
+    return render_template("hw_view.html", man=man, f=f, title=title, back=back)
+
+
+@app.route("/hw/f/<path:f>")
+def hw_file(f):
+    hw_manifest() or abort(404)
+    return send_from_directory(os.path.join(HW_DIR, HW_SET), f, max_age=3600)
+
+
 # ---------------------------------------------------------------- export
 
 @app.route("/vehicle/<int:vid>/export")

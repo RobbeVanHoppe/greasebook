@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<header class="plate slim">
+  <div class="plate-id"><h1>{{ title }}</h1>
+    <div class="plate-sub"><a href="{{ back[1] }}">{{ back[0] }}</a> · drawing</div></div>
+</header>
+<section class="panel wd-fig">
+  <div class="wd-zoom-bar"><span class="dim">Zoom</span>
+    <button type="button" class="btn mini" data-zoom="1">Fit</button>
+    <button type="button" class="btn mini" data-zoom="2">2×</button>
+    <button type="button" class="btn mini" data-zoom="4">4×</button>
+    <a class="btn mini" href="{{ url_for('hw_file', f=f) }}">Open file</a></div>
+  <div class="wd-scroll"><img src="{{ url_for('hw_file', f=f) }}" alt="{{ title }}"></div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='wd.js') }}"></script>{% endblock %}

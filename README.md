@@ -130,7 +130,7 @@ After swapping the database underneath a running instance, hard-reload your brow
 ## Updating
 
 ```bash
-sudo cp -r app.py templates static /opt/greasebook/
+sudo cp -r app.py templates static hwdocs /opt/greasebook/
 sudo systemctl restart greasebook
 ```
 

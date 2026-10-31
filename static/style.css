@@ -511,7 +511,8 @@ body.jg-working .jg-figcol { position: static; order: 2; }
   color: var(--ink); border-radius: var(--radius); }
 .wd-row:hover { background: var(--panel-2); }
 .wd-row.master { border-left: 3px solid var(--accent); }
-.wd-row .tag { margin-left: auto; font: 600 .7rem var(--mono); color: var(--accent); }
+.wd-row .tag { margin-left: auto; font: 600 .7rem var(--mono); color: var(--accent); white-space: nowrap; flex: none; }
+.wd-row > .mono:first-child { white-space: nowrap; flex: none; min-width: 2.6em; }
 .wd-h { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
 .wd-fig { padding: .6rem; }
 .wd-zoom-bar, .wd-pick { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: .5rem; font-size: .8rem; }

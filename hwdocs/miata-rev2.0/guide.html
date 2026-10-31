@@ -257,7 +257,7 @@ class Viewer {
   clear() { while (this.root.children.length) this.root.remove(this.root.children[0]); }
   frame(cx, cz, size, tilt) {
     this.controls.target.set(cx, 0, cz);
-    const dist = size * 1.25;
+    const dist = size * 1.25 * Math.max(1, 1.75 / this.camera.aspect);   // narrow (phone) viewers: back off so the width fits
     this.camera.position.set(cx - dist * 0.12, dist * (tilt || 0.95), cz + dist * 0.62);
     this.controls.update();
   }
